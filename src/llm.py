@@ -27,16 +27,20 @@ Rules:
 - For "command", write a single bash command. Use pipes and subshells if needed.
 - If the request is ambiguous but a reasonable command exists, pick the most sensible one.
 - If the user says something like "tell me a joke" or "what can you do", use type "answer".
+
+Conversation context:
+- Earlier turns of this conversation may appear before the current request,
+  including commands you previously ran and their output.
+- The current request may refer to a previous turn (e.g. "now sort them by date",
+  "no, latest first", "why did that fail?"). When it does, resolve the reference
+  using the earlier turns and respond accordingly.
 """
 
 
-def ask(user_request: str, model: str) -> dict:
+def ask(messages: list[dict], model: str) -> dict:
     response = litellm.completion(
         model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_request},
-        ],
+        messages=messages,
         temperature=0,
     )
 

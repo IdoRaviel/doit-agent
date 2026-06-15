@@ -8,9 +8,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from src.config import load_config
-from src.llm import ask
+from src.llm import ask, SYSTEM_PROMPT
 from src.shell import run_shell
 from src.safety import local_danger_check
+from src.history import load_recent, build_messages, append_turn
 
 
 def main():
@@ -28,8 +29,11 @@ def main():
 
     model = config["model"]
 
+    history = load_recent()
+    messages = build_messages(SYSTEM_PROMPT, history, user_request)
+
     try:
-        response = ask(user_request, model)
+        response = ask(messages, model)
     except Exception as e:
         print(f"LLM error: {e}")
         sys.exit(1)
@@ -53,6 +57,12 @@ def main():
             answer = input("Proceed? [y/N] ").strip().lower()
             if answer != "y":
                 print("Aborted.")
+                append_turn({
+                    "model": model,
+                    "request": user_request, "type": "command",
+                    "command": command, "explanation": explanation,
+                    "executed": False,
+                })
                 sys.exit(0)
 
         print()
@@ -61,14 +71,35 @@ def main():
             print(result["stdout"], end="")
         if result["stderr"]:
             print(result["stderr"], end="", file=sys.stderr)
+
+        # Many commands (touch, rm, mkdir, cd...) are silent on success, so give
+        # explicit feedback that the command ran and how it ended.
+        if result["returncode"] == 0:
+            if not result["stdout"] and not result["stderr"]:
+                print("✓ done")
+        else:
+            print(f"✗ exited with code {result['returncode']}")
+
+        append_turn({
+            "model": model,
+            "request": user_request, "type": "command",
+            "command": command, "explanation": explanation, "executed": True,
+            "stdout": result["stdout"], "stderr": result["stderr"],
+            "returncode": result["returncode"],
+        })
+
         if result["returncode"] != 0:
             sys.exit(result["returncode"])
 
     elif rtype == "answer":
-        print(response.get("text", ""))
+        text = response.get("text", "")
+        print(text)
+        append_turn({"model": model, "request": user_request, "type": "answer", "text": text})
 
     elif rtype == "impossible":
-        print(f"Cannot do that in the shell: {response.get('text', '')}")
+        text = response.get("text", "")
+        print(f"Cannot do that in the shell: {text}")
+        append_turn({"model": model, "request": user_request, "type": "impossible", "text": text})
 
     else:
         print(response.get("text", str(response)))
