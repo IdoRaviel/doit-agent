@@ -199,7 +199,43 @@
 
 ---
 
+## Stage 6 — Memory
+
+- Memory = durable facts/preferences in `~/.doit/memory.jsonl`, separate from
+  per-turn history; survives new terminals/dirs/sessions. Injected into the system
+  prompt every turn so the model can recall/act on them.
+- **Orthogonal, not a type.** A turn can both act AND record a memory, so memory
+  is NOT a response type. (Tried a `memory_candidate` field on the main response;
+  weak models either made it a bogus `type` value or dropped the key.)
+- **Dedicated extraction call (always-run).** A second focused call decides
+  save/skip + condenses, every turn. Chosen over a gated approach because gating
+  depends on the weak main model flagging a candidate, which it does unreliably —
+  so the dedicated call owns the decision. Cost: +1 call/turn.
+- **Dedup by passing memories to the extractor.** The extractor sees "Already
+  known: ..." and returns save:false for facts already stored. This replaced a
+  brittle code-side token-similarity dedup (user's call: "just pass the memories").
+  Fixed a duplicate-on-recall bug where asking about a fact re-saved a paraphrase.
+- Decision journey worth reporting: gated→always-run (weak model can't flag);
+  field-on-response→separate call (weak model drops orthogonal key); code-dedup→
+  pass-memories-to-extractor (semantic, simpler).
+- Bugs fixed here: weak model invented `{"type":"memory"}` → added "type must be
+  one of the four" rule + graceful dispatch fallback; rate-limit errors now print
+  a clean message instead of raw 429 JSON.
+- **Limitations:** (1) factual recall works on all tested models; behavioural
+  preferences ("ask me each time") are shaky on mistral — misread as act-now,
+  not stored, not honoured. (1b) the COMBINED action+memory request is the hardest
+  case: on it each local model nailed only one half — mistral saved the memory but
+  only suggested the action; llama3 ran the action but didn't save the memory.
+  (2) memory list injected into BOTH main + extractor
+  prompts grows with count — retrieval/summarization is a candidate extension.
+  (3) `cd` in a subprocess doesn't change the user's shell dir (user-awareness/
+  multi-tasking stages). (4) gemini memory run blocked by daily free-tier quota.
+- DONE on local models. ACDL: acdl/stage6_memory.md. Runs:
+  report/stage6_memory_runs.md.
+
+---
+
 ## Parking lot / TODO for later stages
 
-- Memory, user-awareness, output-awareness, multi-tasking, +1 extension — add a
-  section each as built.
+- User-awareness, output-awareness, multi-tasking, +1 extension — add a section
+  each as built.

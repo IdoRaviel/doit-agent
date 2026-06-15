@@ -10,10 +10,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from src.config import load_config
-from src.llm import ask, SYSTEM_PROMPT
+from src.llm import ask, extract_memory, SYSTEM_PROMPT
 from src.shell import run_shell
 from src.safety import local_danger_check
 from src.history import load_recent, build_messages, append_turn
+from src.memory import load_memories, format_memories, add_memory
 
 # Seconds to wait for an answer to a clarification, and how many clarification
 # rounds to allow before giving up (guards against a model that loops asking).
@@ -47,7 +48,11 @@ def main():
     model = config["model"]
 
     history = load_recent()
-    messages = build_messages(SYSTEM_PROMPT, history, user_request)
+    # Inject durable memories into the system prompt so the model can act on them.
+    memories = load_memories()
+    mem_block = format_memories(memories)
+    system_prompt = SYSTEM_PROMPT + ("\n\n" + mem_block if mem_block else "")
+    messages = build_messages(system_prompt, history, user_request)
 
     # Ask the model; if it needs to clarify, prompt the user and re-ask with the
     # answer appended, until it returns an actionable response (or we give up).
@@ -56,7 +61,12 @@ def main():
         try:
             response = ask(messages, model)
         except Exception as e:
-            print(f"LLM error: {e}")
+            msg = str(e)
+            if "RESOURCE_EXHAUSTED" in msg or "RateLimit" in type(e).__name__ or "429" in msg:
+                print("Rate limit hit for this model — wait a bit and retry, "
+                      "or switch models in ~/doit.cfg.")
+            else:
+                print(f"LLM error: {msg}")
             sys.exit(1)
 
         if response.get("type") != "clarify":
@@ -91,6 +101,16 @@ def main():
 
         messages.append({"role": "assistant", "content": json.dumps(response)})
         messages.append({"role": "user", "content": choice})
+
+    # Memory: a dedicated call runs every turn and decides whether this turn holds
+    # a durable fact/preference worth saving (and condenses it). Kept separate so
+    # the main model isn't asked to do two jobs in one response.
+    action_summary = response.get("command") or response.get("text") or ""
+    known = [m.get("text", "") for m in memories]
+    decision = extract_memory(user_request, action_summary, model, known)
+    if decision.get("save") and decision.get("text"):
+        add_memory(decision["text"])
+        print(f"🧠 Remembered: {decision['text']}")
 
     rtype = response.get("type")
 
@@ -160,7 +180,15 @@ def main():
         append_turn({"model": model, "request": user_request, "type": "impossible", "text": text})
 
     else:
-        print(response.get("text", str(response)))
+        # Unknown/invented type (some weak models do this): surface any text
+        # gracefully instead of dumping the raw object, and log it.
+        text = response.get("text") or response.get("value") or ""
+        if text:
+            print(text)
+        elif not decision.get("save"):
+            print("Done.")
+        append_turn({"model": model, "request": user_request,
+                     "type": rtype or "unknown", "text": text})
 
 
 if __name__ == "__main__":

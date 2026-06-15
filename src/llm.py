@@ -32,6 +32,9 @@ The JSON must have a "type" field with one of three values:
 
 Rules:
 - Always produce valid JSON. No markdown code fences.
+- The "type" value MUST be exactly one of: command, answer, impossible, clarify.
+  Never invent other type values. If the user only states a fact for you to
+  remember (no action to perform), use "answer" to briefly confirm.
 - For "command", write a single bash command. Use pipes and subshells if needed.
 - If the request is ambiguous but a reasonable default exists, pick the most
   sensible command — do NOT ask. Use "clarify" sparingly: only when the options
@@ -43,6 +46,12 @@ Rules:
 - Distinguish asking HOW from asking to DO: "how do I delete these?" is an
   "answer"; "delete these" is a "command". Imperatives (list, show, delete, move,
   create...) are commands; informational/how-to phrasing is an answer.
+
+Memory:
+- You may be given "Known memories about the user". Use them to resolve
+  references (e.g. "my project folder" → the remembered path) and to adjust
+  behaviour (e.g. a stored preference to ask each time). Deciding what to SAVE is
+  handled separately — you only need to USE the memories you are given.
 
 Conversation context:
 - Earlier turns of this conversation may appear before the current request,
@@ -95,3 +104,59 @@ def _parse(raw: str) -> dict:
         return {"type": "answer", "text": raw}
 
     return data
+
+
+# --- Memory extraction (dedicated second call) -----------------------------
+
+MEMORY_SYSTEM = """\
+You decide whether a candidate fact about the user is worth saving to LONG-TERM
+memory. Long-term memory holds DURABLE facts/preferences that should persist
+across sessions, terminals, and directories — for example:
+- "The user's LLM class project folder is ~/school/llms/ass3."
+- "The user prefers sorting files by modification date."
+- "Always ask the user before deleting files."
+Do NOT save transient task details, command output, or one-off context.
+
+Save ONLY genuinely NEW information the user is ASSERTING this turn. If the user
+is merely asking a question, recalling, or using information they already gave,
+respond save:false — do not re-save it. If the fact is already covered by the
+"Already known" list, respond save:false (do not store a paraphrase of it).
+
+Respond with a single JSON object, no markdown:
+{"save": <true|false>, "text": "<concise, self-contained fact in the third person>"}
+If it is not worth saving, respond {"save": false, "text": ""}.
+The "text" will later be shown without any surrounding context, so make it
+self-contained and concise.
+"""
+
+
+def extract_memory(user_request: str, action_summary: str, model: str,
+                   existing: list[str] | None = None) -> dict:
+    """Dedicated call (runs every turn): decide whether this turn contains a
+    durable fact/preference worth saving, and condense it. `existing` is the list
+    of already-stored memory texts, shown to the model so it won't duplicate them.
+
+    Returns {"save": bool, "text": str}. On any error or unparseable output it
+    returns {"save": False, "text": ""} so memory extraction never breaks a turn.
+    """
+    known = "\n".join(f"- {t}" for t in (existing or [])) or "(none)"
+    try:
+        response = litellm.completion(
+            model=model,
+            messages=[
+                {"role": "system", "content": MEMORY_SYSTEM},
+                {"role": "user", "content": (
+                    f"Already known:\n{known}\n\n"
+                    f"User said: {user_request}\n"
+                    f"What the agent did: {action_summary}"
+                )},
+            ],
+            temperature=0,
+        )
+        raw = response.choices[0].message.content.strip()
+        cleaned = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
+        cleaned = re.sub(r"```\s*$", "", cleaned, flags=re.MULTILINE).strip()
+        data = json.loads(cleaned)
+        return {"save": bool(data.get("save")), "text": str(data.get("text", "")).strip()}
+    except Exception:
+        return {"save": False, "text": ""}
