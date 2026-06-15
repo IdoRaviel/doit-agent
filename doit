@@ -1,6 +1,8 @@
 #!/home/ido-raviel/University/LLM/doit-agent/.venv/bin/python3
 """doit — natural-language shell agent."""
 
+import json
+import select
 import sys
 from pathlib import Path
 
@@ -12,6 +14,21 @@ from src.llm import ask, SYSTEM_PROMPT
 from src.shell import run_shell
 from src.safety import local_danger_check
 from src.history import load_recent, build_messages, append_turn
+
+# Seconds to wait for an answer to a clarification, and how many clarification
+# rounds to allow before giving up (guards against a model that loops asking).
+CLARIFY_TIMEOUT = 120
+MAX_CLARIFY = 3
+
+
+def read_with_timeout(prompt: str, timeout: int):
+    """Print prompt and read one line, waiting at most `timeout` seconds.
+    Returns the entered text, or None if the time elapsed with no input."""
+    print(prompt, end="", flush=True)
+    ready, _, _ = select.select([sys.stdin], [], [], timeout)
+    if ready:
+        return sys.stdin.readline().rstrip("\n")
+    return None
 
 
 def main():
@@ -32,11 +49,48 @@ def main():
     history = load_recent()
     messages = build_messages(SYSTEM_PROMPT, history, user_request)
 
-    try:
-        response = ask(messages, model)
-    except Exception as e:
-        print(f"LLM error: {e}")
-        sys.exit(1)
+    # Ask the model; if it needs to clarify, prompt the user and re-ask with the
+    # answer appended, until it returns an actionable response (or we give up).
+    clarify_rounds = 0
+    while True:
+        try:
+            response = ask(messages, model)
+        except Exception as e:
+            print(f"LLM error: {e}")
+            sys.exit(1)
+
+        if response.get("type") != "clarify":
+            break
+
+        clarify_rounds += 1
+        if clarify_rounds > MAX_CLARIFY:
+            print("Too many clarification rounds — aborting.")
+            sys.exit(0)
+
+        question = response.get("question", "")
+        options = response.get("options", []) or []
+        print(question)
+        for i, opt in enumerate(options, 1):
+            print(f"{i}. {opt}")
+
+        answer = read_with_timeout("Your answer: ", CLARIFY_TIMEOUT)
+        if answer is None or not answer.strip():
+            minutes = CLARIFY_TIMEOUT // 60
+            print(f"\nNo answer within {minutes} minute(s) — exiting. "
+                  f"Re-run doit when you're ready.")
+            append_turn({
+                "model": model, "request": user_request, "type": "clarify",
+                "question": question, "options": options, "answered": False,
+            })
+            sys.exit(0)
+
+        # Let the user reply with an option number or free text.
+        choice = answer.strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(options):
+            choice = options[int(choice) - 1]
+
+        messages.append({"role": "assistant", "content": json.dumps(response)})
+        messages.append({"role": "user", "content": choice})
 
     rtype = response.get("type")
 

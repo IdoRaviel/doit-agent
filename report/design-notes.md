@@ -153,7 +153,31 @@
 
 ---
 
+## Stage — Clarifications  *(in progress)*
+
+- Implemented as a FOURTH response type, `clarify`, not as a native tool:
+  `{"type": "clarify", "question": "...", "options": [...]}`. doit prints the
+  question + numbered options, reads an answer, then re-calls the model with the
+  Q&A appended and handles the result (normally a command).
+- **Why not a native tool (the report point):** the assignment hints the question
+  "can be represented as a tool" if using tool calling. We don't, for the SAME
+  reason as the cross-cutting structured-JSON decision: native tool-calling does
+  not work on the no-tool local model (llama3:8b), so it would split our code
+  path by provider. Keeping `clarify` as one more `type` in the single JSON
+  contract means clarifications work identically across all three required models
+  with no per-model branching. So `command/answer/impossible/clarify` are four
+  shapes of ONE response, not four tools.
+- "Only when needed" tuning lives in the prompt: prefer a sensible default;
+  reserve `clarify` for genuine forks where the choice materially changes the
+  command (e.g. creation vs. access date), not trivial ambiguity.
+- No-answer handling: NEVER guess. Wait up to `CLARIFY_TIMEOUT=120s` (select-based
+  timed read on stdin), then exit cleanly with a message; record an unanswered
+  clarify turn. Bounded at `MAX_CLARIFY=3` rounds.
+- DONE & tested (answered + no-answer paths). ACDL: acdl/stage4_clarifications.md.
+
+---
+
 ## Parking lot / TODO for later stages
 
-- Clarifications, richer interactions, memory, user-awareness, output-awareness,
+- Richer interactions, memory, user-awareness, output-awareness,
   multi-tasking, +1 extension — add a section each as built.
