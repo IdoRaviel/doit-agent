@@ -17,6 +17,10 @@ doit.cfg
 # Project context file (local only, not published)
 CLAUDE.md
 
+# Course materials (copyrighted lecture slides — do not publish)
+*.pdf
+LLM 2026 - Class*.pdf
+
 # OS / editor
 .DS_Store
 Thumbs.db
