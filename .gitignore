@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Secrets / local config
+doit.cfg
+.env
+*.key
+
+# doit runtime state
+.doit/
+
+# Project context file (local only, not published)
+CLAUDE.md
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs (keep curated logs under logs/ committed; ignore scratch)
+*.tmp
+*.log
