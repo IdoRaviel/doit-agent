@@ -32,7 +32,7 @@ message; no explicit `PromptEndsHere` marker is needed.
 - History is persisted in `~/.doit/history.jsonl` (append-only, one record per
   turn); only the last `MAX_TURNS` are replayed.
 
-Diagram: `diagrams/stage3.png` (paste the block into the ACDL Live Editor,
+Diagram: `diagrams/stage3_multi_turn.png` (paste the block into the ACDL Live Editor,
 https://acdlang26.github.io/acdlsite/visualizer.html, and export).
 
 ## Prompt template (`INSTRUCTIONS`) — delta from Stage 2

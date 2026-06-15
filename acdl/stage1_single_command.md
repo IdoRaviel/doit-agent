@@ -17,7 +17,7 @@ SingleCommand[@T]: {
   output contract with `type` ∈ {command, answer, impossible}).
 - `env.user_request[@T]` — the natural-language request for the current turn.
 
-Diagram: `diagrams/stage1.png` (paste the block into the ACDL Live Editor,
+Diagram: `diagrams/stage1_single_command.png` (paste the block into the ACDL Live Editor,
 https://acdlang26.github.io/acdlsite/visualizer.html, and export).
 
 ## Prompt template (`INSTRUCTIONS`)
