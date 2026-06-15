@@ -1,10 +1,10 @@
 [model]
 # Model name in LiteLLM format: provider/model-name
 # Examples:
-#   gemini/gemini-2.0-flash       (hosted, Google AI Studio - free tier)
+#   gemini/gemini-2.5-flash       (hosted, Google AI Studio - free tier)
 #   ollama/mistral:7b             (local, tool-calling)
 #   ollama/llama3:8b              (local, no tool-calling)
-name = gemini/gemini-2.0-flash
+name = gemini/gemini-2.5-flash
 
 # API key for hosted providers. Not needed for ollama.
 api_key = YOUR_API_KEY_HERE
