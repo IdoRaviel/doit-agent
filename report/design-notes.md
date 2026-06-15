@@ -177,7 +177,29 @@
 
 ---
 
+## Stage 5 — Richer interactions
+
+- PROMPT-ONLY change (no scheme change; same context as Stage 4). Two new
+  behaviours: (a) "how do I…" questions → `answer` that EXPLAINS + suggests the
+  command in backticks WITHOUT executing; (b) follow-ups resolved from replayed
+  history — "execute it"/"run it"/"do it" → `command`; "modify it to …" keeps the
+  same mode (a suggestion stays an `answer`; an executed command stays a
+  `command`).
+- "it" in "modify it" = the previously suggested/run command; the model tells the
+  two apart because the replay shows executed commands as `Ran: <cmd>` vs an
+  answer's plain suggestion text.
+- **Rules alone were not enough for mistral** — it kept turning "modify it" into a
+  command. Adding a one-shot example to the prompt fixed it; gemini followed the
+  rules without the example. (Weak instruction model needs examples, not just
+  rules — recurring theme.)
+- Bug fixed here: dangerous-command `Proceed?` used bare `input()` → crashed with
+  EOFError on closed stdin; now caught and treated as "no" (abort).
+- DONE & tested (mistral before/after example, gemini). ACDL:
+  acdl/stage5_richer_interactions.md. Runs: report/stage5_richer_interactions_runs.md.
+
+---
+
 ## Parking lot / TODO for later stages
 
-- Richer interactions, memory, user-awareness, output-awareness,
-  multi-tasking, +1 extension — add a section each as built.
+- Memory, user-awareness, output-awareness, multi-tasking, +1 extension — add a
+  section each as built.

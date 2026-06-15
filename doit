@@ -108,7 +108,11 @@ def main():
         if not llm_safe or local_dangerous:
             reason = local_reason or "this command modifies your system"
             print(f"\n⚠️  This may be dangerous: {reason}.")
-            answer = input("Proceed? [y/N] ").strip().lower()
+            try:
+                answer = input("Proceed? [y/N] ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                answer = "n"
+                print()
             if answer != "y":
                 print("Aborted.")
                 append_turn({
