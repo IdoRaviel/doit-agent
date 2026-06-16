@@ -195,7 +195,7 @@
 - Bug fixed here: dangerous-command `Proceed?` used bare `input()` → crashed with
   EOFError on closed stdin; now caught and treated as "no" (abort).
 - DONE & tested (mistral before/after example, gemini). ACDL:
-  acdl/stage5_richer_interactions.md. Runs: report/stage5_richer_interactions_runs.md.
+  acdl/stage5_richer_interactions.md. Runs: report/run_logs/stage5_richer_interactions_runs.md.
 
 ---
 
@@ -233,7 +233,7 @@
   free-tier 503/429 (the 2-call design doubles requests; hosted rate limits bite
   faster — local models unaffected).
 - DONE on local models. ACDL: acdl/stage6_memory.md. Runs:
-  report/stage6_memory_runs.md.
+  report/run_logs/stage6_memory_runs.md.
 
 ---
 
@@ -268,7 +268,7 @@
 - Needs a documented `PROMPT_COMMAND='history -a'` bashrc hook for fresh in-session
   history (allowed by the assignment; documented in README).
 - DONE on local models. ACDL: acdl/stage7_user_awareness.md. Runs:
-  report/stage7_user_awareness_runs.md.
+  report/run_logs/stage7_user_awareness_runs.md.
 
 ---
 
@@ -286,7 +286,7 @@
   "Proposed (not run)" command was not executed (don't claim it failed). Re-tested:
   correctly says it was not run.
 - ACDL: no scheme change (acdl/stage8_output_awareness.md notes the prompt delta).
-  Runs: report/stage8_output_awareness_runs.md.
+  Runs: report/run_logs/stage8_output_awareness_runs.md.
 
 ---
 
@@ -311,13 +311,13 @@
 - Limitation: memory extractor still occasionally over-saves a one-off action on
   mistral (W2's "create folders" saved as a memory) despite the one-off filter.
 - ACDL: acdl/stage9_multitasking.md (session-scoped History + 2 tools; same shape
-  as stage7). Runs: report/stage9_multitasking_runs.md.
+  as stage7). Runs: report/run_logs/stage9_multitasking_runs.md.
 
 ---
 
 ## Stage 10 — Extension: Project profiles
 
-- Three candidates described (report/stage10): context compaction, project
+- Three candidates described (report/run_logs/stage10): context compaction, project
   profiles, command plans. IMPLEMENTED project profiles (easiest + clearly
   additional; the multi-step tool loop already exists in core so it's not "the
   extension").
@@ -330,7 +330,7 @@
   walk-up from a subdir. Works on the weak model because it's PUSH (in context),
   not a tool to decide to call — same as output-awareness.
 - ACDL: acdl/stage10 (adds sys.project[@T] to the system block; same loop as
-  stage9). Runs: report/stage10_project_profiles_runs.md.
+  stage9). Runs: report/run_logs/stage10_project_profiles_runs.md.
 
 ---
 

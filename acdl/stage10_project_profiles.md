@@ -33,7 +33,7 @@ ProjectProfile[@T]: {
 - `sys.project[@T]` — contents of the nearest `.doit.md` (capped), rendered with a
   "follow these unless the user overrides" preamble (`src/project.py`).
 
-Diagram: `diagrams/stage10-project_aware.png` — same shape as Stage 9 with one
+Diagram: `../report/assets/stage10-project_aware.png` — same shape as Stage 9 with one
 extra `sys.project[@T]` line in the system block.
 
 No `INSTRUCTIONS` change — the injected block is self-describing.

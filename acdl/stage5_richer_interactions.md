@@ -24,8 +24,8 @@ RicherInteractions[@T]: {
 }
 ```
 
-Diagram: `diagrams/stage5_richer_interactions.png` — same structure as Stage 4;
-include it for completeness, or note "unchanged from Stage 4". Follow-up
+Diagram: same structure as Stage 4 — see `../report/assets/stage4_clarifications.png`
+(richer interactions add no new context scheme). Follow-up
 resolution ("execute it" → run the previously suggested command) works entirely
 through the existing `resp.replay[t]` history replay; it is not a new context
 element.

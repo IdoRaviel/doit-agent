@@ -14,7 +14,7 @@ SingleCommand[@T]: {
 }
 ```
 
-Diagram: `diagrams/stage2_dangerous_commands.png` (same structure as Stage 1; include it for
+Diagram: `../report/assets/stage2_dangerous_commands.png` (same structure as Stage 1; include it for
 completeness, or note "unchanged from Stage 1" in the report).
 
 ## Prompt template (`INSTRUCTIONS`) — delta from Stage 1

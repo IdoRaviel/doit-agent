@@ -221,18 +221,19 @@ doit "open my notes folder"         # later, even in a new terminal
 ```
 doit-agent/
 ├── doit                 # the CLI launcher (Python)
-├── src/                 # config, llm, shell, safety, history, memory
+├── src/                 # config, llm, shell, safety, history, memory, tools, project
 ├── doit.cfg.example     # sample config to copy to ~/doit.cfg
 ├── requirements.txt
-├── acdl/                # ACDL context descriptions + rendered diagrams
-└── report/              # design notes + per-stage experiment run logs
+├── acdl/                # ACDL context descriptions (diagrams in report/assets/)
+└── report/              # report.pdf/.html, design notes, run logs, assets/ (diagrams)
 ```
 
 ---
 
 ## Status
 
-Implemented: single command, safety gate, model flexibility, multi-turn,
-clarifications, richer interactions, and persistent memory. Planned next:
-user-awareness (reading your shell history), output-awareness, multi-terminal
-sessions, and a further agent extension.
+All assignment capabilities are implemented: single command, safety gate, model
+flexibility, multi-turn, clarifications, richer interactions, persistent memory,
+user-awareness (shell history + CWD), output-awareness, multi-terminal sessions,
+and an extension (project profiles). A full write-up is in
+[`report/doit_report.pdf`](report/doit_report.pdf).

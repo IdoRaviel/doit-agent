@@ -50,7 +50,7 @@ ExtractMemory[@T]: {
 - `resp.action[@T]` — a short summary of what the agent did this turn (the command
   or answer text), so the extractor has context for its decision.
 
-Diagrams: `diagrams/stage6-Memory.png` (shows both the main and the extraction
+Diagrams: `../report/assets/stage6-Memory.png` (shows both the main and the extraction
 contexts).
 
 ## Prompt templates — delta from Stage 5

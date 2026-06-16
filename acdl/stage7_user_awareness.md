@@ -56,7 +56,7 @@ UserAware[@T]: {
 - The two `If` blocks are intra-turn loops (tool calls and clarifications),
   bounded in code (`MAX_TOOLS`, `MAX_CLARIFY`); ACDL has no `While`.
 
-Diagram: `diagrams/stage7-user_awareness.png`.
+Diagram: `../report/assets/stage7-user_awareness.png`.
 
 ## Prompt template (`INSTRUCTIONS`) — delta from Stage 6
 

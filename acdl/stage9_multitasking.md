@@ -50,7 +50,7 @@ MultiTask[@T]: {
 - Session id = `$DOIT_SESSION` or the launching shell's pid (`current_session()`).
   Stale sessions are pruned lazily (`prune_stale`), not in the context.
 
-Diagram: `diagrams/stage9-multi_task.png` — differs from Stage 7: session-scoped
+Diagram: `../report/assets/stage9-multi_task.png` — differs from Stage 7: session-scoped
 `History` and the `ForEach(@k)` multi-step tool/clarify loop.
 
 ## Prompt delta from Stage 7 (`src/llm.py`)

@@ -20,6 +20,8 @@ CLAUDE.md
 # Course materials (copyrighted lecture slides — do not publish)
 *.pdf
 LLM 2026 - Class*.pdf
+# ...but DO track the generated report PDF
+!report/doit_report.pdf
 
 # OS / editor
 .DS_Store

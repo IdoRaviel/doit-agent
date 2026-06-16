@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>doit — An Interactive LLM Shell Agent</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 18mm 20mm 18mm;
+    @bottom-center { content: counter(page); font-family: 'DejaVu Sans', sans-serif; font-size: 9px; color: #888; }
+    @top-right { content: "doit — Assignment 3: Agents"; font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #aaa; }
+  }
+  @page :first { @top-right { content: ""; } @bottom-center { content: ""; } }
+
+  html { font-family: 'DejaVu Serif', Georgia, serif; font-size: 10.5pt; line-height: 1.45; color: #1c1c1c; }
+  body { margin: 0; }
+
+  h1, h2, h3, h4 { font-family: 'DejaVu Sans', 'Helvetica Neue', Arial, sans-serif; color: #14315c; line-height: 1.25; }
+  h2 { font-size: 16pt; border-bottom: 2px solid #14315c; padding-bottom: 3px; margin-top: 26px; page-break-after: avoid; }
+  h3 { font-size: 12.5pt; color: #1f4e79; margin-top: 16px; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; color: #333; margin: 12px 0 4px; page-break-after: avoid; }
+
+  p { margin: 6px 0; text-align: justify; }
+  ul, ol { margin: 6px 0 6px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  code { font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: 8.8pt; background: #f1f3f6; padding: 0 3px; border-radius: 3px; }
+  pre { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.4pt; line-height: 1.35; background: #f6f8fa; border: 1px solid #dde3ea;
+        border-left: 3px solid #1f4e79; border-radius: 4px; padding: 8px 10px; white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid; }
+  pre.transcript { border-left-color: #2e7d32; background: #f5faf6; }
+  pre.acdl { border-left-color: #6a1b9a; background: #faf6fc; }
+
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #cdd6e0; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #14315c; color: #fff; font-family: 'DejaVu Sans', sans-serif; font-size: 8.6pt; }
+  tr:nth-child(even) td { background: #f6f8fa; }
+
+  .todo { background: #fff7e6; border: 1px solid #f0c674; border-left: 4px solid #e0a106; padding: 7px 10px; margin: 9px 0; font-size: 9pt; }
+  .todo b { color: #9a6700; }
+  .note { background: #eef4fb; border-left: 4px solid #1f4e79; padding: 7px 10px; margin: 9px 0; font-size: 9.2pt; }
+  .limit { background: #fdf0f0; border-left: 4px solid #b03030; padding: 7px 10px; margin: 9px 0; font-size: 9.2pt; }
+
+  .q { font-style: italic; color: #5a3e00; }
+  figure { margin: 10px 0; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 96%; border: 1px solid #d6dde6; }
+  figcaption { font-size: 8.2pt; color: #777; font-family: 'DejaVu Sans', sans-serif; margin-top: 3px; }
+
+  /* Title page */
+  .title-page { height: 247mm; display: flex; flex-direction: column; justify-content: center; text-align: center; page-break-after: always; }
+  .title-page .doc-title { font-size: 34pt; color: #14315c; font-family: 'DejaVu Sans', sans-serif; font-weight: bold; margin-bottom: 4px; }
+  .title-page .doc-sub { font-size: 15pt; color: #1f4e79; font-family: 'DejaVu Sans', sans-serif; margin-bottom: 36px; }
+  .title-page .meta { font-size: 12pt; color: #333; line-height: 1.8; }
+  .title-page .tag { font-size: 9.5pt; color: #888; margin-top: 40px; font-family: 'DejaVu Sans Mono', monospace; }
+  .section-break { page-break-before: always; }
+  a { color: #1f4e79; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- ===================== TITLE PAGE ===================== -->
+<div class="title-page">
+  <div class="doc-title">doit</div>
+  <div class="doc-sub">An Interactive LLM Shell Agent</div>
+  <div class="meta">
+    <div><b>Assignment 3 — Agents</b></div>
+    <div>LLM Course</div>
+    <div style="margin-top:18px;">Ido Raviel &nbsp;·&nbsp; 322758285</div>
+    <div>Ofek Chincholiker &nbsp;·&nbsp; 323811925</div>
+    <div style="font-size:10pt;color:#777;margin-top:10px;">June 2026</div>
+  </div>
+  <div class="tag">a natural-language → shell agent, built incrementally across all assignment sections</div>
+</div>
+
+<!-- ===================== QUICK REFERENCE ===================== -->
+<h2 id="quickref">Quick Reference</h2>
+<p>This table maps each part of the assignment to where it is covered in this report, the
+capability delivered, and the code that implements it. The agent is a single Python program
+(<code>doit</code>) plus modules under <code>src/</code>; runtime state lives in the hidden
+<code>~/.doit/</code> directory and the model is selected in <code>~/doit.cfg</code>.</p>
+
+<table>
+  <tr><th>§</th><th>Assignment part</th><th>What was delivered</th><th>Key code</th></tr>
+  <tr><td>1</td><td>Overview &amp; architecture</td><td>LPU-system model, structured-JSON contract, the agent loop</td><td><code>doit</code></td></tr>
+  <tr><td>2</td><td>Single command at a time</td><td>NL→bash, three response types, capture stdout/stderr/rc</td><td><code>llm.py</code>, <code>shell.py</code></td></tr>
+  <tr><td>3</td><td>Identifying dangerous commands</td><td>Dual safety gate (LLM flag + regex), <code>y</code> confirmation</td><td><code>safety.py</code></td></tr>
+  <tr><td>4</td><td>Model flexibility</td><td>Hosted + 2 local models, one-line config switch</td><td><code>config.py</code></td></tr>
+  <tr><td>5</td><td>ACDL documentation</td><td>Context schemes + diagrams + prompt templates</td><td><code>acdl/</code></td></tr>
+  <tr><td>6</td><td>Multi-turn</td><td>Persistent history, reference resolution, no classifier</td><td><code>history.py</code></td></tr>
+  <tr><td>7</td><td>Clarifications</td><td><code>clarify</code> type, 120 s timed wait, never guesses</td><td><code>doit</code>, <code>llm.py</code></td></tr>
+  <tr><td>8</td><td>Richer interactions</td><td>"how do I…" answers; execute / modify follow-ups</td><td><code>llm.py</code></td></tr>
+  <tr><td>9</td><td>Memory</td><td>Durable facts via a dedicated extraction call</td><td><code>memory.py</code></td></tr>
+  <tr><td>10</td><td>User awareness</td><td><code>shell_history</code> tool + CWD injection</td><td><code>tools.py</code></td></tr>
+  <tr><td>11</td><td>Output awareness</td><td>Reasoning over stored command output/errors</td><td><code>history.py</code></td></tr>
+  <tr><td>12</td><td>Multi-tasking</td><td>Per-terminal sessions + cross-window tools</td><td><code>history.py</code>, <code>tools.py</code></td></tr>
+  <tr><td>13</td><td>Further extensions</td><td>3 described; project profiles implemented</td><td><code>project.py</code></td></tr>
+  <tr><td>14</td><td>Model comparison</td><td>mistral (tool) vs llama3 (no-tool), with failures</td><td>—</td></tr>
+  <tr><td>A</td><td>Prompts, tools, schemas</td><td>Full system prompt, tool registry, JSON schema</td><td>appendix</td></tr>
+</table>
+
+<div class="note"><b>Models used throughout.</b>
+<b>Hosted:</b> <code>gemini/gemini-2.5-flash</code> (Google AI Studio, free tier).
+<b>Local, tool-calling:</b> <code>ollama/mistral:7b</code>.
+<b>Local, no tool-calling:</b> <code>ollama/llama3:8b</code> (run with Ollama on an RTX 4070).</div>
+
+<div class="todo"><b>TODO (gemini coverage):</b> the hosted free tier repeatedly returned HTTP 503/429 during testing,
+so several later sections were tested on the two local models only. Each affected example is marked with a
+<b>gemini TODO</b> box to be filled in once the quota allows. Sections 2–6 already include gemini output.</div>
+
+<!-- ===================== 1. OVERVIEW ===================== -->
+<h2 id="overview" class="section-break">1. Overview &amp; Architecture</h2>
+<p><code>doit</code> takes a natural-language request as a command-line argument, decides what to
+do with it, and — when the request is a shell task — prints the command, runs it, and shows the
+output. It grows in capability across the assignment from a stateless translator into a
+session-aware agent with memory, tools, and multi-terminal support.</p>
+
+<h3>1.1 The LPU-system view</h3>
+<p>Following the course model, the language model is a <i>Language Processing Unit</i> (LPU): it
+maps an input buffer (instructions + data + tool descriptions) to an output buffer (text and
+structured instructions). <code>doit</code> is the surrounding <b>system</b>: it formats the
+input, calls the LPU, interprets the structured response, and loops. Every <code>doit</code>
+invocation is one user turn, but a single turn may issue several LPU calls (for tools or
+clarifications) before acting.</p>
+
+<h3>1.2 Central design decision: structured JSON, not native tool-calling</h3>
+<p>The LPU always replies with a single JSON object whose <code>type</code> field selects how the
+system handles it. We deliberately do <b>not</b> use a provider's native tool-calling API. The
+assignment requires three model classes including a <i>local model without tool-calling
+support</i>; native tool-calls would not work there and would split the code into per-provider
+paths. A plain-text JSON contract works identically on all three models, gives us full control of
+parsing and fallback, and is transparent to document in ACDL. The course slides frame the LPU
+response as simply "something the agent can interpret (JSON, code, XML, …)", which is exactly this
+approach.</p>
+
+<h3>1.3 Components and state</h3>
+<table>
+  <tr><th>Module</th><th>Responsibility</th></tr>
+  <tr><td><code>doit</code></td><td>Entry point: build prompt, run the agent loop, dispatch the response, confirm dangerous commands.</td></tr>
+  <tr><td><code>src/config.py</code></td><td>Read <code>~/doit.cfg</code> (model + API key) and set the provider key.</td></tr>
+  <tr><td><code>src/llm.py</code></td><td>System prompt, the LPU call (via LiteLLM), JSON parsing, the memory-extraction call.</td></tr>
+  <tr><td><code>src/shell.py</code></td><td>Execute a command with <code>subprocess</code>, capturing stdout, stderr, return code.</td></tr>
+  <tr><td><code>src/safety.py</code></td><td>Regex backstop that flags destructive commands.</td></tr>
+  <tr><td><code>src/history.py</code></td><td>Per-session multi-turn history; replay; pruning; cross-session access.</td></tr>
+  <tr><td><code>src/memory.py</code></td><td>Durable user memories (global, persistent).</td></tr>
+  <tr><td><code>src/tools.py</code></td><td>Tool registry (shell history, session tools) advertised to the model.</td></tr>
+  <tr><td><code>src/project.py</code></td><td>Project profiles (<code>.doit.md</code>) — the implemented extension.</td></tr>
+</table>
+<p>Persistent state is consolidated in the hidden directory <code>~/.doit/</code>
+(<code>history.jsonl</code>, <code>memory.jsonl</code>), keeping the home directory clean; the only
+visible file is the assignment-mandated <code>~/doit.cfg</code>.</p>
+
+<!-- ===================== 2. SINGLE COMMAND ===================== -->
+<h2 id="single" class="section-break">2. Single Command at a Time</h2>
+<h3>2.1 What was implemented</h3>
+<p>The base agent translates a natural-language request into a single bash command, prints it,
+executes it, and shows the output. The model returns one JSON object whose <code>type</code> is
+one of three values, so the program can recognise which case it received:</p>
+<ul>
+  <li><code>command</code> — the request is a shell task → show + run the command.</li>
+  <li><code>answer</code> — a question or conversation → print a text reply.</li>
+  <li><code>impossible</code> — not achievable in the shell → explain why.</li>
+</ul>
+
+<pre class="transcript">$ doit "list the files in my Documents folder"
+# Lists files in ~/Documents
+ls ~/Documents
+
+doc1.pdf  doc2.pdf  notes.md</pre>
+
+<h3>2.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How would you capture the model's command output (convenient format)?</p>
+<p>We ask the model for one JSON object (no markdown), parse it, and read the <code>command</code>
+field. Execution uses <code>subprocess.run</code> with <code>capture_output=True</code>,
+<code>text=True</code>, and a timeout, returning <code>stdout</code>, <code>stderr</code>, and
+<code>returncode</code> — exactly the three signals the assignment asks for. Because many commands
+(<code>touch</code>, <code>rm</code>, <code>mkdir</code>) are silent on success, the program prints
+<code>✓ done</code> on a silent success and <code>✗ exited with code N</code> on failure, so the
+user always gets feedback.</p>
+
+<p class="q">Q: What if the request is not possible in the shell?</p>
+<p>The model returns <code>type: "impossible"</code> with a short explanation, e.g. "order a pizza"
+→ "I'm a shell assistant, not a food-delivery service." Nothing is executed.</p>
+
+<p class="q">Q: What about "tell me a joke" or "what can you do"?</p>
+<p>These map to <code>type: "answer"</code> and get a friendly text reply rather than a command.</p>
+
+<div class="note"><b>How the type is decided.</b> There is no separate classifier call — the single
+LPU response carries the <code>type</code>, and a bad/!JSON reply falls back to a plain answer. One
+call, one decision, easy to document.</div>
+
+<h3>2.3 ACDL context &amp; prompt</h3>
+<p>On a single, stateless turn the context is just the system instructions plus the user request.</p>
+<pre class="acdl">SingleCommand[@T]: {
+    S: INSTRUCTIONS
+    U: env.user_request[@T]
+}</pre>
+<figure><img src="report/assets/stage1_single_command.png" alt="single command ACDL"><figcaption>Figure 2.1 — Single-command context (rendered ACDL).</figcaption></figure>
+<p>The <code>INSTRUCTIONS</code> template is the system prompt that defines the JSON contract; it is
+listed in full in Appendix&nbsp;A.</p>
+
+<div class="limit"><b>Limitations.</b> A single stateless turn: no awareness of previous requests,
+the filesystem, or the user — all added in later sections.</div>
+
+<!-- ===================== 3. DANGEROUS ===================== -->
+<h2 id="danger" class="section-break">3. Identifying Dangerous Commands</h2>
+<h3>3.1 What was implemented</h3>
+<p>Read-only commands (e.g. <code>ls</code>, <code>grep</code>) run directly. Commands that modify
+the system (create, move, delete, overwrite, change permissions, rewrite git state) are shown with
+an explanation and require the user to type <code>y</code> before they run.</p>
+
+<pre class="transcript">$ doit "create a file named bla.txt"
+# Creates an empty file named 'bla.txt'
+touch bla.txt
+
+⚠️  This may be dangerous: creates/updates files.
+Proceed? [y/N] y
+✓ done</pre>
+
+<h3>3.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How will you identify these cases? (one option is a separate LLM call.)</p>
+<p>We use a <b>dual safety gate</b> (defence in depth). A command auto-runs only if <i>both</i>
+conditions hold:</p>
+<ol>
+  <li>the LPU tagged it <code>"safe": true</code> in the JSON, <b>and</b></li>
+  <li>a local regex backstop in <code>safety.py</code> finds no destructive pattern.</li>
+</ol>
+<p>Otherwise the program explains the command and waits for <code>y</code>. We do not trust the
+model alone for a safety-critical decision: the deterministic regex check (covering <code>rm</code>,
+<code>mv</code>, <code>dd</code>, <code>chmod</code>, redirections, <code>find … -delete</code>, git
+history rewrites, …) is a second, auditable opinion. The confirmation prompt is hardened against a
+closed input stream (EOF/interrupt are treated as "no").</p>
+
+<div class="note"><b>ACDL.</b> The context is unchanged from §2; only the <code>command</code> schema
+gains a <code>safe</code> field. The auto-run-vs-confirm decision is <i>program</i> logic, kept out
+of the prompt so the safety behaviour stays deterministic. (Figure 2.1 applies.)</div>
+
+<div class="limit"><b>Limitations.</b> The regex backstop is heuristic — it can over-flag an exotic
+but harmless command, and it cannot understand intent. The <code>y</code> gate is the real safety
+net. We also observed <code>mistral</code> occasionally over-flagging a read-only pipe as unsafe via
+its own <code>safe:false</code> — harmless (caught by the gate), but noisier than the hosted model.</div>
+
+<!-- ===================== 4. MODEL FLEXIBILITY ===================== -->
+<h2 id="flex" class="section-break">4. Model Flexibility</h2>
+<h3>4.1 What was implemented</h3>
+<p>The agent runs against three model classes, selected by a single line in <code>~/doit.cfg</code>:</p>
+<table>
+  <tr><th>Class</th><th><code>name =</code></th><th>Notes</th></tr>
+  <tr><td>Hosted API</td><td><code>gemini/gemini-2.5-flash</code></td><td>Google AI Studio free tier (2.0-flash had a <code>limit:0</code> quota issue on a fresh project).</td></tr>
+  <tr><td>Local, tool-calling</td><td><code>ollama/mistral:7b</code></td><td>Served by Ollama.</td></tr>
+  <tr><td>Local, no tool-calling</td><td><code>ollama/llama3:8b</code></td><td>Served by Ollama.</td></tr>
+</table>
+<p>There is <b>no model-specific code</b>. LiteLLM is the only thing that talks to a model and
+routes on the <code>provider/</code> prefix of the config string: <code>gemini/*</code> goes to
+Google's hosted API (key from <code>~/doit.cfg</code>); <code>ollama/*</code> goes to the local
+Ollama daemon at <code>localhost:11434</code>. Switching models is a one-line edit, read fresh on
+every invocation — no restart, no code change. This is exactly why the assignment mandates LiteLLM,
+and it is what makes the same structured-JSON contract portable across all three.</p>
+<div class="note">The detailed behavioural differences between the models are collected in
+§14 (Model Comparison), as the assignment requests.</div>
+
+<!-- ===================== 5. ACDL ===================== -->
+<h2 id="acdl" class="section-break">5. ACDL Documentation</h2>
+<p>ACDL (Agentic Context Description Language) describes only the <i>context sent to the LPU</i> —
+roles, templates, data variables, and control flow over turns — not the program logic. We
+maintained ACDL incrementally; each context scheme has a textual block and a rendered diagram. The
+diagrams appear inline in the relevant sections; this section explains the notation and lists the
+schemes.</p>
+<h3>5.1 Notation used</h3>
+<ul>
+  <li>Roles: <code>S:</code> system, <code>U:</code> user, <code>A:</code> assistant.</li>
+  <li>Namespaces: <code>env.*</code> external inputs (the user request), <code>sys.*</code>
+      agent/environment state (cwd, memories, tools, tool results), <code>resp.*</code> prior LPU
+      outputs.</li>
+  <li>Templates are <code>ALL_CAPS</code> (e.g. <code>INSTRUCTIONS</code>, <code>AVAILABLE_TOOLS</code>);
+      time is 1-indexed (<code>@T</code> current, <code>@t</code> a loop variable).</li>
+  <li>Control flow: <code>ForEach</code> over a range, <code>If/ElseIf</code> conditionals. ACDL has
+      no <code>While</code> loop, so a bounded intra-turn agent loop is modelled as
+      <code>ForEach(@k: range(1, MAX_STEPS))</code> with a two-dimensional index <code>[@T, @k]</code>
+      (the <i>k</i>-th LPU call within turn <i>T</i>).</li>
+</ul>
+<h3>5.2 Context schemes across the assignment</h3>
+<table>
+  <tr><th>Scheme</th><th>Introduced in</th><th>What changed</th></tr>
+  <tr><td>Base (stateless)</td><td>§2 single command</td><td><code>S: INSTRUCTIONS</code>, <code>U: request</code></td></tr>
+  <tr><td>(prompt-only)</td><td>§3 dangerous</td><td>adds <code>safe</code> field; same scheme</td></tr>
+  <tr><td>+ history</td><td>§6 multi-turn</td><td>replay prior turns</td></tr>
+  <tr><td>+ clarify loop</td><td>§7 clarifications</td><td>intra-turn <code>If clarify</code></td></tr>
+  <tr><td>+ memory</td><td>§9 memory</td><td><code>sys.memories</code> injected; separate extractor context</td></tr>
+  <tr><td>+ tools, cwd</td><td>§10 user awareness</td><td><code>AVAILABLE_TOOLS</code>, <code>sys.cwd</code>, tool loop</td></tr>
+  <tr><td>+ sessions</td><td>§12 multi-tasking</td><td>session-scoped history; multi-step <code>ForEach(@k)</code></td></tr>
+  <tr><td>+ project</td><td>§13 extension</td><td><code>sys.project</code> injected</td></tr>
+</table>
+<p>The full prompt templates for each are in Appendix&nbsp;A.</p>
+
+<!-- ===================== 6. MULTI-TURN ===================== -->
+<h2 id="multiturn" class="section-break">6. Multi-turn</h2>
+<h3>6.1 What was implemented</h3>
+<p>Because each <code>doit</code> run is a separate process, history is persisted so follow-ups can
+refer to earlier turns. After acting, the program appends one record to
+<code>~/.doit/history.jsonl</code>; on the next run it replays the recent turns into the context.</p>
+<pre class="transcript">$ doit "list the files in this directory"
+ls                       → acdl  doit  report  src  …
+$ doit "now sort them by size, largest first"
+ls -lS                   → (sorted listing)
+$ doit "no, smallest first"
+ls -lS | tail -n +2 | sort -h</pre>
+<p>Turns 2 and 3 resolve "them" and the correction against the earlier turns — across three
+separate processes.</p>
+
+<h3>6.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How and where do you store the history?</p>
+<p>Append-only JSON Lines at <code>~/.doit/history.jsonl</code>. Each record stores the timestamp,
+session id, the request, the type, the command + explanation, and the execution result
+(stdout/stderr/return code, plus an <code>executed</code> flag). JSONL suits a fresh process per
+turn — append one line, tail the last N — with no rewrite.</p>
+<p class="q">Q: How do you present the history to the LLM?</p>
+<p>We replay the last <code>MAX_TURNS = 8</code> turns as real user/assistant message pairs. The
+user message is the old request; the assistant message is a rendered view (for a command:
+<code>Ran: &lt;cmd&gt;</code> + a clipped output tail + exit code; for an answer: the text). Clipping
+bounds the context; the window bounds drift.</p>
+<p class="q">Q: How do you distinguish new commands from ones that refer to previous turns — and
+which one?</p>
+<p>Deliberately <b>no separate classifier</b>. We feed the bounded recent history and let the model
+decide whether a request is fresh or a reference, and which prior turn it points at. A hard
+"is-this-a-follow-up?" gate is brittle on indirect references; replaying real turns is simpler and
+degrades gracefully.</p>
+
+<pre class="acdl">MultiTurn[@T]: {
+    S: INSTRUCTIONS
+    ForEach(@t: range(1, @T-1)) {
+        U: env.user_request[@t]
+        A: resp.replay[@t]
+    }
+    U: env.user_request[@T]
+}</pre>
+<figure><img src="report/assets/stage3_multi_turn.png" alt="multi-turn ACDL"><figcaption>Figure 6.1 — Multi-turn context: system + replayed history + current request.</figcaption></figure>
+<div class="limit"><b>Limitations.</b> Only the last 8 turns are replayed (older context is dropped —
+addressed conceptually by the "context compaction" extension in §13). Each record is also tagged
+with the producing <code>model</code> for traceability only — it is not fed back into the context.</div>
+
+<!-- ===================== 7. CLARIFICATIONS ===================== -->
+<h2 id="clarify" class="section-break">7. Clarifications</h2>
+<h3>7.1 What was implemented</h3>
+<p>A fourth response type, <code>clarify</code>, lets the model ask a question with options instead
+of guessing. <code>doit</code> prints them, waits for an answer, then re-asks the model with the
+answer appended.</p>
+<pre class="transcript">$ doit "sort the files here by date"
+Which date do you want to sort by?
+1. modification date
+2. access date
+3. creation date
+Your answer: 2
+# ...sorted by access date...
+ls -tlu</pre>
+
+<h3>7.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How do you identify uncertainty (useful but not annoying)?</p>
+<p>The prompt instructs the model to prefer a sensible default and use <code>clarify</code> only
+when the options lead to <i>materially different</i> commands with no clearly-best default (e.g.
+creation vs. access vs. modification date). So it asks rarely.</p>
+<p class="q">Q: What if the user does not answer?</p>
+<p>The agent <b>never guesses</b>. It waits up to <code>CLARIFY_TIMEOUT = 120 s</code> (a
+<code>select</code>-based timed read on stdin) and then exits cleanly with a message, recording an
+unanswered turn. The loop is bounded by <code>MAX_CLARIFY = 3</code> rounds.</p>
+<p class="q">Q: How is the mechanism implemented (the question as a tool)?</p>
+<p>As a structured-JSON response type rather than a native tool — the same portability reason as in
+§1.2. So <code>command / answer / impossible / clarify</code> are four shapes of one response, not
+four tools. ACDL has no <code>While</code>, so the round-trip is modelled with an
+<code>If resp.type == clarify</code> block (the bound lives in code).</p>
+
+<pre class="acdl">Clarify[@T]: {
+    S: INSTRUCTIONS
+    ForEach(@t: range(1, @T-1)) { U: env.user_request[@t]  A: resp.replay[@t] }
+    U: env.user_request[@T]
+    If resp.type[@T] == clarify {
+        A: resp.clarify[@T]
+        U: env.clarify_answer[@T]
+    }
+}</pre>
+<figure><img src="report/assets/stage4_clarifications.png" alt="clarifications ACDL"><figcaption>Figure 7.1 — Clarification adds a conditional intra-turn exchange.</figcaption></figure>
+<div class="limit"><b>Limitations.</b> Whether to ask is the model's judgement and is model-dependent
+(see §14): on the same prompt the hosted model asked while the local models defaulted.</div>
+
+<!-- ===================== 8. RICHER ===================== -->
+<h2 id="richer" class="section-break">8. Richer Interactions</h2>
+<h3>8.1 What was implemented</h3>
+<p>The agent answers non-command questions ("how do I…") with an explanation and a <i>suggested</i>
+command (not executed), and supports follow-ups: "execute it" runs the suggestion, "modify it to…"
+updates it.</p>
+<pre class="transcript">$ doit "how do I list the 3 largest files here?"
+You can list them with `ls -lS | head -n 3`. ...        (answer — nothing run)
+$ doit "modify it to show the 5 largest"
+Use `ls -lS | head -n 5`.                                (still a suggestion)
+$ doit "execute it"
+ls -lS | head -n 5                                       (now it runs)</pre>
+
+<h3>8.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How to make it work? What happens in longer sequences?</p>
+<p>This is a prompt-only change on top of multi-turn: the prompt distinguishes asking <i>how</i>
+(an <code>answer</code> with the command in backticks) from asking to <i>do</i> (a
+<code>command</code>), and resolves "execute it" / "modify it" against the replayed history (an
+executed command appears as <code>Ran:</code>; a suggestion appears as plain text). Notably, rules
+alone were not enough for <code>mistral</code> — it kept turning "modify it" into an execution; a
+single worked <b>example</b> added to the prompt fixed it, while the hosted model obeyed the rules
+without one. (No new ACDL scheme; Figure 7.1 applies.)</p>
+<div class="limit"><b>Limitations.</b> Command <i>quality</i> on the follow-ups is model-dependent
+(§14): the no-tool model produced logically poor commands even when the conversational flow was
+right.</div>
+
+<!-- ===================== 9. MEMORY ===================== -->
+<h2 id="memory" class="section-break">9. Memory</h2>
+<h3>9.1 What was implemented</h3>
+<p>Durable facts/preferences about the user persist across terminals, directories, and sessions in
+<code>~/.doit/memory.jsonl</code>, and are injected into every prompt so the agent can act on them
+later. The same request can both act and store a memory.</p>
+<pre class="transcript">$ doit "the folder ~/school/llms/ass3 is my LLM class project folder"
+🧠 Remembered: The user's LLM class project folder is ~/school/llms/ass3.
+... (acknowledgement)
+
+# later, in a brand-new terminal (history cleared, memory kept):
+$ doit "what is the path to my llm class project?"
+The path to your LLM class project is ~/school/llms/ass3</pre>
+
+<h3>9.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How are memories stored and when?</p>
+<p>Memory is <b>orthogonal to the response type</b> (a turn can act <i>and</i> remember), so it is
+not a type. Deciding what to save is done by a <b>dedicated extraction call</b> that runs every
+turn: a focused second LPU call looks at the request and decides "is there a durable fact? if so,
+write it concisely." We use a separate call because the weaker local models could not reliably add
+a memory field <i>and</i> answer in one response — a clear instance of the two-jobs-in-one-output
+problem. Storage is a plain append.</p>
+<p class="q">Q: How do memories appear in the LLM context?</p>
+<p>All stored memories are rendered into the system prompt every turn (<code>sys.memories</code>),
+so even a brand-new terminal sees them.</p>
+<p class="q">Q: What about "I changed my mind … ask me each time"?</p>
+<p>Memories are listed oldest→newest and the model is told later entries override earlier ones, so
+a new preference supersedes an old one. To avoid re-saving a fact the user merely <i>asks about</i>,
+the extractor is shown the already-known memories ("Already known: …") and returns
+<code>save:false</code> for anything already stored — this fixed a duplicate-on-recall bug.</p>
+
+<pre class="acdl">MemoryAware[@T]: {
+    S: { INSTRUCTIONS  sys.memories }
+    ForEach(@t: range(1, @T-1)) { U: env.user_request[@t]  A: resp.replay[@t] }
+    U: env.user_request[@T]
+}
+// separate extraction context:
+ExtractMemory[@T]: { S: MEMORY_INSTRUCTIONS  U: { env.user_request[@T]  resp.action[@T]  sys.memories } }</pre>
+<figure><img src="report/assets/stage6-Memory.png" alt="memory ACDL"><figcaption>Figure 9.1 — Two contexts per turn: the main context (with memories injected) and the dedicated extraction call.</figcaption></figure>
+
+<div class="todo"><b>gemini TODO:</b> on gemini, <b>store</b> was tested (the memory was saved with a
+clean acknowledgement); the <b>recall</b> turn could not be captured because the free tier returned
+503/429. Re-run the store→recall sequence on gemini and insert the recall transcript here.</div>
+
+<div class="limit"><b>Limitations.</b> Factual recall works well; <i>behavioural</i> preferences
+("ask me each time") are shaky on <code>mistral</code> (it read the preference as an action and did
+not store it). The combined action+memory request is the hardest case — see §14. Injecting all
+memories into every prompt grows with memory count; a retrieval/summarisation layer (§13) would
+bound it. Reading the cwd is free, but a <code>cd</code> the agent runs cannot change the user's
+real shell directory (a subprocess limitation).</div>
+
+<!-- ===================== 10. USER AWARENESS ===================== -->
+<h2 id="useraware" class="section-break">10. User Awareness</h2>
+<h3>10.1 What was implemented</h3>
+<p>The agent becomes aware of the <i>user's</i> own actions and location two ways: the current
+working directory is injected into the prompt every turn (free — <code>doit</code> inherits the
+shell's directory), and a <code>shell_history</code> <b>tool</b> returns the user's recent
+interactive commands on demand. This is the explicit tool-call loop the course unit is about —
+implemented as roll-your-own tool use (a <code>tool</code> response type), so it works on all three
+models.</p>
+<pre class="transcript"># user has run, in their shell:  cd ~/school/llms/ass3 ; mkdir data ; python train.py ; ls -la
+$ doit "summarize what I just did in the shell"
+You navigated to your school project directory, created a 'data' folder, ran the
+Python script 'train.py', and listed the directory contents in long format.</pre>
+<p>User vs. <code>doit</code> actions separate <b>naturally</b>: <code>doit</code> runs commands via
+<code>subprocess</code>, which never touch the interactive bash history, so
+<code>shell_history</code> returns only the user's manual commands (and <code>doit …</code>
+invocation lines are filtered out). A one-line <code>PROMPT_COMMAND='history -a'</code> snippet in
+<code>~/.bashrc</code> (documented in the README) keeps history fresh in-session.</p>
+
+<h3>10.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How to integrate the user's behaviour, and combine it with the agent's, in the
+context?</p>
+<p>CWD is always pushed into the system prompt; shell history is pulled via a tool only when
+relevant (e.g. "what did I just do"). The agent's own actions remain in
+<code>~/.doit/history.jsonl</code>; the user's are in bash history — two clearly separated streams.
+Tools are advertised to the model in the system prompt (<code>AVAILABLE_TOOLS</code>), mirroring the
+course example that lists <code>use_google(...) / use_healthline(...)</code>.</p>
+
+<pre class="acdl">UserAware[@T]: {
+    S: { INSTRUCTIONS  AVAILABLE_TOOLS  sys.cwd[@T]  sys.memories }
+    History { ForEach(@t: range(1, @T-1)) { U: env.user_request[@t]  A: resp.replay[@t] } }
+    U: env.user_request[@T]
+    If resp.type[@T] == tool {
+        A: resp.tool_call[@T]
+        U: sys.tool_result[@T]
+    }
+}</pre>
+<figure><img src="report/assets/stage7-user_awareness.png" alt="user awareness ACDL"><figcaption>Figure 10.1 — Tools + CWD in the system block; a tool call feeds its result back.</figcaption></figure>
+
+<div class="todo"><b>gemini TODO:</b> the <code>shell_history</code> tool call was tested on
+<code>mistral</code> and <code>llama3</code> (mistral used it correctly; llama3 did not — see §14).
+Re-run "summarize what I just did" on gemini and insert the transcript here.</div>
+
+<!-- ===================== 11. OUTPUT AWARENESS ===================== -->
+<h2 id="outaware" class="section-break">11. Output Awareness</h2>
+<h3>11.1 What was implemented</h3>
+<p>Questions about a previous command's output or errors are answered directly, because the prior
+command's stdout/stderr/exit-code are already stored and replayed. No new code was needed.</p>
+<pre class="transcript">$ doit "show the contents of /etc/sudoers"
+cat /etc/sudoers                 → cat: /etc/sudoers: Permission denied   (exit 1)
+$ doit "why did that fail?"
+It failed because you don't have read access to /etc/sudoers; try `sudo cat /etc/sudoers`.
+
+$ doit "show the 5 largest files here"   → (a listing)
+$ doit "which of these looks safe to delete?"
+doit.cfg.example is small and just an example config — likely safe; back it up first.</pre>
+
+<h3>11.2 Design decisions &amp; assignment questions</h3>
+<p>The replayed assistant turn (<code>resp.replay</code>) already carries <code>Ran: &lt;cmd&gt;</code>
+plus a clipped stdout/stderr tail and the exit code, so output awareness is a property of the
+multi-turn design rather than a new mechanism. A small prompt rule was added to ground failure
+explanations in the real stored output and to <b>not</b> claim a "Proposed (not run)" command failed
+(it correctly reports such a command as not executed). No new ACDL scheme (Figure 10.1 applies).</p>
+<div class="note"><b>Push vs. pull.</b> Output awareness is "push" — the output is already in the
+context, so even the no-tool model handles it well; contrast the shell-history tool in §10, which is
+"pull" and requires the model to decide to call it (where the no-tool model failed). This contrast
+recurs in §14.</div>
+
+<!-- ===================== 12. MULTI-TASKING ===================== -->
+<h2 id="multitask" class="section-break">12. Multi-tasking</h2>
+<h3>12.1 What was implemented</h3>
+<p>Each terminal gets a <code>session</code> id, so each window keeps its own history stream, while
+explicit cross-window references are still possible. The session id is <code>$DOIT_SESSION</code>
+(set by an optional <code>.bashrc</code> snippet) or, by default, the launching shell's process id —
+stable across invocations in one terminal and different between terminals, so it works with no
+setup.</p>
+<h4>Session isolation</h4>
+<pre class="transcript">Window 1:  doit "list the files in this directory"        → ls (+ listing)
+Window 2:  doit "create a folder for each year 2020..2026" → for i in {2020..2026}; do mkdir -p ./years/$i; done
+Window 1:  doit "sort them by size"                        → ls -lS   (sorts W1's listing, NOT W2's folders)</pre>
+<h4>Cross-window reference</h4>
+<pre class="transcript">Window 1:  doit "now do the same folder task we did in the other window, here"
+           for i in {2020..2026}; do mkdir -p ./years/$i; done   (reproduced W2's exact command)</pre>
+<p>With memory cleared and Window 1's own history holding no folder task, the only way to obtain
+that command is via the tools: the model calls <code>list_sessions</code> (a catalogue of the other
+windows with a short summary of each) to find Window 2 by its description, then
+<code>session_history(id)</code> to read its commands.</p>
+
+<h3>12.2 Design decisions &amp; assignment questions</h3>
+<p class="q">Q: How to make the agent aware of which stream it is running in, when history is several
+interleaved streams?</p>
+<p>By default <code>load_recent()</code> filters history to the current session, so each window only
+sees its own turns. The user never knows the internal session id, so cross-window works as
+<b>two-step tool use</b>: <code>list_sessions</code> returns id + summary; the model matches the
+user's phrase ("the other window") to a session and only then calls
+<code>session_history</code> with that id; genuine ambiguity falls back to a clarification.</p>
+<p class="q">Q: What about closed terminals?</p>
+<p>Cleanup is <b>lazy and staleness-based</b> — sessions idle for more than 7 days are pruned on the
+next run — rather than tied to a terminal-close hook, because close events are unreliable
+(<code>kill</code>, crash, SSH drop, reboot do not fire a hook).</p>
+
+<pre class="acdl">MultiTask[@T]: {
+    S: { INSTRUCTIONS  AVAILABLE_TOOLS  sys.cwd[@T]  sys.memories }
+    History { ForEach(@t: sys.session_turns[@T]) { U: env.user_request[@t]  A: resp.replay[@t] } }  // current session only
+    U: env.user_request[@T]
+    ForEach(@k: range(1, MAX_STEPS)) {            // intra-turn agent loop
+        If resp.type[@T,@k] == tool   { A: resp.tool_call[@T,@k]  U: sys.tool_result[@T,@k] }
+        ElseIf resp.type[@T,@k] == clarify { A: resp.clarify[@T,@k]  U: env.clarify_answer[@T,@k] }
+    }
+}</pre>
+<figure><img src="report/assets/stage9-multi_task.png" alt="multitasking ACDL"><figcaption>Figure 12.1 — Session-scoped history and the multi-step tool/clarify loop. The cross-window flow runs as @k=1 list_sessions → @k=2 session_history → @k=3 the command.</figcaption></figure>
+<p>This multi-step <code>ForEach(@k)</code> loop mirrors the agentic loop from the course
+(observe → select action → act → observe response): the model emits a structured request, the
+environment executes it and feeds the result back, and the loop continues until the model produces
+a final command or answer.</p>
+
+<div class="todo"><b>gemini TODO:</b> isolation and cross-window were tested on <code>mistral</code>
+(reliable) and <code>llama3</code> (inconsistent — see §14). Re-run the cross-window sequence on
+gemini and insert the transcript here.</div>
+
+<!-- ===================== 13. EXTENSIONS ===================== -->
+<h2 id="ext" class="section-break">13. Further Extensions</h2>
+<p>The assignment asks for three extensions to be described and one implemented. We note first that
+multi-step <i>tool</i> use already exists in the core (the <code>ForEach(@k)</code> loop chains
+tool/clarify steps, §12), so it is not used as the additional extension.</p>
+
+<h3>13.1 Three candidate extensions</h3>
+<table>
+  <tr><th>Candidate</th><th>What it adds</th><th>How it would be built</th><th>Why harder</th></tr>
+  <tr><td>Context compaction / summarisation</td><td>Summarise turns that fall out of the 8-turn window into a running "summary so far", so long sessions keep early context.</td><td>A dedicated summarisation call over the oldest turns; store a per-session summary and prepend it; refresh as turns age out.</td><td>Extra model call (cost + quality risk: a bad summary silently corrupts context) and invalidation logic.</td></tr>
+  <tr><td><b>Project profiles (implemented)</b></td><td>Per-folder <code>.doit.md</code> instructions so the agent behaves differently per project (the <i>agent.md</i> idea).</td><td>Find the nearest <code>.doit.md</code> and inject it into the prompt.</td><td>Easiest — pure context injection, no new call/type/loop.</td></tr>
+  <tr><td>Command plans</td><td>One request → a proposed numbered sequence of shell commands, shown, then executed step-by-step.</td><td>A new <code>plan</code> type + an execution loop reusing the safety gate and output feedback; replan on a failed step.</td><td>New type + multi-command execution with per-step confirmation and failure handling.</td></tr>
+</table>
+
+<h3>13.2 Implemented: project profiles</h3>
+<p>We implemented project profiles because it is clearly additional and reuses the existing
+context-injection pattern with no new model call, response type, or loop, yet is a genuine
+capability (per-project behaviour / context management). <code>doit</code> finds the <b>nearest</b>
+<code>.doit.md</code> — starting at the current directory and walking <i>up</i> through parents,
+using the first one found (like <code>git</code> locating <code>.git</code>) — caps it, and injects
+it as a "Project profile" block. A profile thus applies anywhere below it; a closer profile in a
+subfolder overrides a more general one higher up; if none exists, nothing is injected.</p>
+<pre class="transcript"># /tmp/projtest/.doit.md :
+#   - When listing files, ALWAYS use long format with human-readable sizes (ls -lh).
+$ cd /tmp/projtest      && doit "list the files here"   → ls -lh
+$ cd /tmp/projtest/sub  && doit "list the files here"   → ls -lh   (walk-up found the profile)</pre>
+<pre class="acdl">ProjectProfile[@T]: {
+    S: { INSTRUCTIONS  AVAILABLE_TOOLS  sys.cwd[@T]  sys.project[@T]  sys.memories }
+    History { ForEach(@t: sys.session_turns[@T]) { U: env.user_request[@t]  A: resp.replay[@t] } }
+    U: env.user_request[@T]
+    ForEach(@k: range(1, MAX_STEPS)) { If resp.type[@T,@k] == tool { … } ElseIf … clarify { … } }
+}</pre>
+<figure><img src="report/assets/stage10-project_aware.png" alt="project profiles ACDL"><figcaption>Figure 13.1 — The extension adds one line, <code>sys.project[@T]</code>, to the system block.</figcaption></figure>
+<p>Because the profile is pushed into context (not a tool to decide to call), <b>both</b> local
+models honoured it (each produced <code>ls -lh</code>), including from a nested subdirectory.</p>
+<div class="todo"><b>gemini TODO:</b> project profiles tested on the two local models; re-run on
+gemini and confirm <code>.doit.md</code> is honoured.</div>
+
+<!-- ===================== 14. MODEL COMPARISON ===================== -->
+<h2 id="compare" class="section-break">14. Model Comparison</h2>
+<p>The assignment asks for a comparison between two local models — one trained for tool calling
+(<code>mistral:7b</code>) and one not (<code>llama3:8b</code>) — including at least one interaction
+where the weaker model failed or needed different prompting. The hosted model
+(<code>gemini-2.5-flash</code>) is included where output was captured before the free-tier limits.</p>
+
+<h3>14.1 Summary across capabilities</h3>
+<table>
+  <tr><th>Capability</th><th>gemini (hosted)</th><th>mistral:7b (tool)</th><th>llama3:8b (no-tool)</th></tr>
+  <tr><td>Structured JSON contract</td><td>clean</td><td>clean</td><td>clean on easy cases</td></tr>
+  <tr><td>Multi-turn references</td><td>✔ simplest commands</td><td>✔ correct</td><td>✔ resolves, but poor commands</td></tr>
+  <tr><td>Clarify when ambiguous</td><td>✔ asked</td><td>defaulted (didn't ask)</td><td>defaulted + broken command</td></tr>
+  <tr><td>"modify it" stays a suggestion</td><td>✔ from rules</td><td>only after an example</td><td>flow ok, command poor</td></tr>
+  <tr><td>Memory: combined action+memory</td><td>TODO</td><td>saved memory, did <i>not</i> run</td><td>ran command, did <i>not</i> save</td></tr>
+  <tr><td>Shell-history TOOL (pull)</td><td>TODO</td><td>✔ called it correctly</td><td>✘ never called it; hallucinated</td></tr>
+  <tr><td>Output awareness (push)</td><td>TODO</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Cross-window TOOL (pull)</td><td>TODO</td><td>✔ reliable</td><td>inconsistent (worked once, then failed)</td></tr>
+  <tr><td>Project profile (push)</td><td>TODO</td><td>✔</td><td>✔</td></tr>
+</table>
+
+<h3>14.2 The central finding</h3>
+<p>The non-tool model handles the <i>structure</i> (valid JSON, correct response type, reference
+resolution) but is markedly weaker at the two things the tool-trained model does well: producing
+<b>correct shell commands</b> and <b>deciding to call a tool</b>. A clear divide also emerges
+between <b>push</b> capabilities (information already in context — output awareness, project
+profiles) which even <code>llama3</code> handles, and <b>pull</b> capabilities (a tool the model
+must choose to call — shell history, cross-window) which <code>llama3</code> performs unreliably.</p>
+
+<h3>14.3 Concrete failure cases</h3>
+<h4>(a) Command logic — sort direction inverted and output garbled (llama3)</h4>
+<p>On "sort the files by size, largest first" then "smallest first":</p>
+<pre class="transcript">gemini :  ls -S            then  ls -Sr                         (correct)
+mistral:  ls -lS           then  ls -lS | tail -n +2 | sort -h  (correct)
+llama3 :  ls -lSr | grep ^- | cut -d' ' -f9-                    (WRONG)
+          → -r reverses, so "largest first" became smallest first;
+          → cut -d' ' splits on a single space but ls -l pads with runs of
+            spaces, so the output was garbled (truncated/!split names).</pre>
+
+<h4>(b) Needed different prompting — "modify it" (mistral)</h4>
+<p>After a "how do I…" answer, "modify it to show 5" should stay a <i>suggestion</i>.
+<code>gemini</code> obeyed the rule directly; <code>mistral</code> kept turning it into an executed
+command until a single worked <b>example</b> was added to the prompt, after which it complied. This
+shows the weaker instruction model needs examples, not just rules, for subtle behaviour.</p>
+
+<h4>(c) Tool-call decision — shell history (llama3)</h4>
+<pre class="transcript"># seeded shell history: cd /opt/zephyr-quux ; ./run_glorbax.sh --frobnicate 7 ; export WIBBLE=42
+$ doit "what did I just run in my shell?"
+mistral:  "You recently ran cd /opt/zephyr-quux, ./run_glorbax.sh --frobnicate 7,
+           and export WIBBLE=42."          (called the tool; recited the real commands)
+llama3 :  "You ran `Ran: ls -l`."          (HALLUCINATED — never emitted a tool request;
+                                            even echoed the internal 'Ran:' replay format)</pre>
+
+<h4>(d) Combined action + memory — each local model gets one half</h4>
+<pre class="transcript">$ doit "list all the files in ~/school/llms/ass3, this is my llm class project folder"
+mistral:  saved the memory, but only SUGGESTED the listing (did not run it)
+llama3 :  RAN the listing, but did NOT save the memory
+          (llama3's extractor returns {"save": false} on this input, so nothing is stored)</pre>
+<p>Because the action and the memory decision are two independent LPU calls, one can succeed while
+the other fails — and the two weak models fail on opposite halves. The hosted model is the one we
+would expect to do both; that run is a gemini TODO.</p>
+
+<div class="todo"><b>gemini TODO (this section):</b> fill in the gemini column for memory, the
+shell-history tool, output awareness, cross-window, and project profiles once the free-tier quota
+allows the runs to complete.</div>
+
+<!-- ===================== APPENDIX A ===================== -->
+<h2 id="appendixA" class="section-break">Appendix A — Prompts, Tools &amp; Schemas</h2>
+<h3>A.1 Response schema (the JSON contract)</h3>
+<pre>command :  {"type":"command", "command":"&lt;bash&gt;", "explanation":"&lt;one line&gt;", "safe":&lt;true|false&gt;}
+answer  :  {"type":"answer", "text":"&lt;reply&gt;"}
+impossible:{"type":"impossible", "text":"&lt;why&gt;"}
+clarify :  {"type":"clarify", "question":"&lt;q&gt;", "options":["&lt;opt&gt;", ...]}
+tool    :  {"type":"tool", "tool":"&lt;name&gt;", "args":{ ... }}</pre>
+
+<h3>A.2 System prompt (INSTRUCTIONS), abridged</h3>
+<pre>You are a shell assistant. Respond with a single JSON object — no markdown.
+The "type" field is exactly one of: command, answer, impossible, clarify, tool.
+ 1. command — a shell task. Set "safe" false if it creates/moves/deletes/overwrites
+    files, changes permissions/ownership, formats disks, or rewrites git state.
+ 2. answer — a question/conversation, or a "how do I..." request: explain and put the
+    suggested command in backticks, but do NOT execute it.
+ 3. impossible — cannot be done in the shell.
+ 4. clarify — genuinely ambiguous AND the choice materially changes the command.
+ 5. tool — you need info only a tool can provide; available tools are listed below.
+Rules (excerpt): prefer a sensible default over asking; "how do I" = answer, imperative
+ = command; "execute it/run it" runs the previous suggestion; "modify it to..." keeps
+ the same mode. To explain a failure use the earlier turn's real output + exit code;
+ a "Proposed (not run)" command was not executed. Use stored memories to resolve
+ references. [+ a worked example of a how-do-I thread]</pre>
+
+<h3>A.3 Memory-extraction prompt (MEMORY_INSTRUCTIONS), abridged</h3>
+<pre>Decide whether a candidate fact is worth saving to LONG-TERM memory (durable
+facts/preferences across sessions). Do NOT save transient task details, command
+output, activity summaries, or one-off actions ("delete the .log files" is an action,
+not a preference). Save only NEW info the user asserts; if it is already in the
+"Already known" list, return save:false. Reply: {"save":&lt;bool&gt;, "text":"&lt;concise fact&gt;"}.</pre>
+
+<h3>A.4 Tool registry (advertised as AVAILABLE_TOOLS)</h3>
+<table>
+  <tr><th>Tool</th><th>Purpose</th><th>Args</th></tr>
+  <tr><td><code>shell_history</code></td><td>The user's recent interactive shell commands (not doit's own).</td><td><code>{"n": &lt;count&gt;}</code></td></tr>
+  <tr><td><code>list_sessions</code></td><td>Other terminal sessions, each with a summary (for cross-window references).</td><td>none</td></tr>
+  <tr><td><code>session_history</code></td><td>Recent turns of another session, to reuse what was done there.</td><td><code>{"session": "&lt;id&gt;"}</code></td></tr>
+</table>
+
+<h3>A.5 Safety backstop (regex patterns, excerpt)</h3>
+<pre>rm, rmdir, mv, dd, mkfs, chmod, chown, truncate, shred, mkdir, touch, ln,
+&gt;/&gt;&gt; (redirections), find ... -delete, find ... -exec, git reset|clean|checkout|rebase</pre>
+
+<!-- ===================== APPENDIX B ===================== -->
+<h2 id="appendixB" class="section-break">Appendix B — Interaction Logs</h2>
+<p>These are captured runs from development. The same fixed sequence was run against each model, with
+<code>~/.doit/</code> state reset between models so streams did not leak. They include successful
+cases, failure cases, and a recovery case, and they are the basis for the comparison in §14.</p>
+
+<h3>B.1 Multi-turn &amp; model flexibility — the same 4-turn sequence on all three models</h3>
+<p>Sequence: (1) "list the files in this directory", (2) "now sort them by size, largest first",
+(3) "no, smallest first", (4) "what can you do?".</p>
+<pre class="transcript">gemini-2.5-flash
+  T1  ls
+  T2  ls -S
+  T3  ls -Sr
+  T4  (answer) I can help you with shell commands! Tell me what you want to do, and I'll
+      provide the command, an explanation, and tell you if it's safe to run...
+
+mistral:7b
+  T1  ls
+  T2  ls -lS
+  T3  ls -lS | tail -n +2 | sort -h
+  T4  (answer) I can execute shell commands, manage files and directories, navigate the
+      file system, interact with processes, and provide information...
+
+llama3:8b
+  T1  ls
+  T2  ls -lSr | grep ^- | cut -d' ' -f9-      ← "largest first" but -r = smallest first;
+                                                cut -d' ' garbles ls -l's padded columns
+  T3  ls -lSr | grep ^- | cut -d' ' -f9- | tac
+  T4  (answer) I can run shell commands, answer questions, and provide information about
+      previous turns...</pre>
+<p>All three produced valid JSON, the right response type each turn, and resolved the follow-up
+references; the divergence was command quality (llama3 inverted the sort and garbled the output).</p>
+
+<h3>B.2 Tool use — "what did I just run?" (the clearest model divergence)</h3>
+<p>Bash history seeded with three deliberately unguessable commands so the answer can only come from
+actually calling the <code>shell_history</code> tool.</p>
+<pre class="transcript"># seeded: cd /opt/zephyr-quux ; ./run_glorbax.sh --frobnicate 7 ; export WIBBLE=42
+$ doit "what did I just run in my shell?"
+
+mistral:7b →  "You recently ran `cd /opt/zephyr-quux`, `./run_glorbax.sh --frobnicate 7`,
+               and `export WIBBLE=42`."          (called the tool; recited the real commands)
+
+llama3:8b  →  "You ran `Ran: ls -l`."            (FAILURE: never emitted a tool request;
+                                                  hallucinated, echoing the internal 'Ran:' format)</pre>
+
+<h3>B.3 Output awareness — explaining a real failure, and a recovery case</h3>
+<pre class="transcript">$ doit "show the contents of /etc/sudoers"
+cat /etc/sudoers
+cat: /etc/sudoers: Permission denied            (exit code 1)
+$ doit "why did that fail?"
+mistral: "...failed because you don't have read access to /etc/sudoers; try `sudo cat /etc/sudoers`."
+llama3 : "...the cat command failed for lack of permissions; exit code 1 = permission error."
+
+# recovery case — an aborted (never-run) command must not be reported as a failure:
+$ doit "delete everything in this directory"     → rm -rf *   (dangerous; aborted at the prompt)
+$ doit "why did that fail?"
+"The proposed command would delete all files recursively ... I won't execute it without
+ confirmation ... type 'execute it' ..."         (correctly: not run, not a failure)</pre>
+
+<h3>B.4 Multi-tasking — session isolation and a cross-window reference</h3>
+<pre class="transcript">Window 1:  doit "list the files in this directory"          → ls
+Window 2:  doit "create a folder for each year 2020..2026"  → for i in {2020..2026}; do mkdir -p ./years/$i; done
+Window 1:  doit "sort them by size"                         → ls -lS   (sorts W1's listing, not W2's folders)
+
+Window 1:  doit "now do the same folder task we did in the other window, here"
+  mistral:7b → for i in {2020..2026}; do mkdir -p ./years/$i; done   (reliable: used list_sessions + session_history)
+  llama3:8b  → reproduced it once, but on a re-run ignored the reference and just did `ls`  (INCONSISTENT)</pre>
+
+<div class="todo"><b>gemini TODO:</b> the logs above for memory recall, the shell-history tool,
+multi-tasking, and project profiles were captured on the two local models only (the hosted free
+tier hit 503/429). Re-run those sequences on gemini and append the transcripts here.</div>
+
+</body>
+</html>

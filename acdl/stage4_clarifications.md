@@ -33,7 +33,7 @@ Clarify[@T]: {
   ACDL has no `While`; the repeat-until-actionable behaviour (bounded by
   `MAX_CLARIFY`) lives in `doit`, not in the context description.
 
-Diagram: `diagrams/stage4_clarifications.png` (paste the block into the ACDL Live Editor,
+Diagram: `../report/assets/stage4_clarifications.png` (paste the block into the ACDL Live Editor,
 https://acdlang26.github.io/acdlsite/visualizer.html, and export).
 
 ## Prompt template (`INSTRUCTIONS`) — delta from Stage 3
