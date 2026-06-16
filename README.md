@@ -130,7 +130,20 @@ ollama pull llama3:8b      # a strong instruction model without tool-calling
 Ollama runs a local server automatically; `doit` reaches it via LiteLLM at the
 default `http://localhost:11434`.
 
-### 6. Verify
+### 6. (Optional) Enable shell-history awareness
+
+So `doit` can answer "what did I just do?" using your *recent* commands, let bash
+flush history after each command. Add to `~/.bashrc` (or `~/.zshrc`):
+
+```bash
+export PROMPT_COMMAND='history -a'
+```
+
+Without this, bash only writes `~/.bash_history` on shell exit, so the most recent
+in-session commands may be missing. (`doit`'s own commands run via subprocess and
+never enter your shell history, so they stay separate from your manual commands.)
+
+### 7. Verify
 
 ```bash
 doit "what can you do?"

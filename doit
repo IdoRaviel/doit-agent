@@ -2,6 +2,7 @@
 """doit — natural-language shell agent."""
 
 import json
+import os
 import select
 import sys
 from pathlib import Path
@@ -15,11 +16,13 @@ from src.shell import run_shell
 from src.safety import local_danger_check
 from src.history import load_recent, build_messages, append_turn
 from src.memory import load_memories, format_memories, add_memory
+from src.tools import format_tools, run_tool
 
 # Seconds to wait for an answer to a clarification, and how many clarification
-# rounds to allow before giving up (guards against a model that loops asking).
+# rounds / tool calls to allow before giving up (guards against a looping model).
 CLARIFY_TIMEOUT = 120
 MAX_CLARIFY = 3
+MAX_TOOLS = 4
 
 
 def read_with_timeout(prompt: str, timeout: int):
@@ -48,15 +51,23 @@ def main():
     model = config["model"]
 
     history = load_recent()
-    # Inject durable memories into the system prompt so the model can act on them.
     memories = load_memories()
     mem_block = format_memories(memories)
-    system_prompt = SYSTEM_PROMPT + ("\n\n" + mem_block if mem_block else "")
+
+    # Build the system prompt: static contract + available tools + current working
+    # directory (user-awareness: cwd is free since doit runs from the user's shell)
+    # + durable memories.
+    system_prompt = SYSTEM_PROMPT + "\n\n" + format_tools()
+    system_prompt += f"\n\nCurrent working directory: {os.getcwd()}"
+    if mem_block:
+        system_prompt += "\n\n" + mem_block
     messages = build_messages(system_prompt, history, user_request)
 
-    # Ask the model; if it needs to clarify, prompt the user and re-ask with the
-    # answer appended, until it returns an actionable response (or we give up).
+    # Ask the model; it may first call a tool (we run it and feed the result back)
+    # or clarify (we prompt the user), re-asking until it returns an actionable
+    # response (command/answer/impossible) or we hit the loop guards.
     clarify_rounds = 0
+    tool_calls = 0
     while True:
         try:
             response = ask(messages, model)
@@ -69,38 +80,54 @@ def main():
                 print(f"LLM error: {msg}")
             sys.exit(1)
 
-        if response.get("type") != "clarify":
-            break
+        rtype = response.get("type")
 
-        clarify_rounds += 1
-        if clarify_rounds > MAX_CLARIFY:
-            print("Too many clarification rounds — aborting.")
-            sys.exit(0)
+        if rtype == "tool":
+            tool_calls += 1
+            if tool_calls > MAX_TOOLS:
+                print("Too many tool calls — aborting.")
+                sys.exit(0)
+            tname = response.get("tool", "")
+            targs = response.get("args", {}) or {}
+            result = run_tool(tname, targs)
+            messages.append({"role": "assistant", "content": json.dumps(response)})
+            messages.append({"role": "user",
+                             "content": f"Tool {tname} result:\n{result}"})
+            continue
 
-        question = response.get("question", "")
-        options = response.get("options", []) or []
-        print(question)
-        for i, opt in enumerate(options, 1):
-            print(f"{i}. {opt}")
+        if rtype == "clarify":
+            clarify_rounds += 1
+            if clarify_rounds > MAX_CLARIFY:
+                print("Too many clarification rounds — aborting.")
+                sys.exit(0)
 
-        answer = read_with_timeout("Your answer: ", CLARIFY_TIMEOUT)
-        if answer is None or not answer.strip():
-            minutes = CLARIFY_TIMEOUT // 60
-            print(f"\nNo answer within {minutes} minute(s) — exiting. "
-                  f"Re-run doit when you're ready.")
-            append_turn({
-                "model": model, "request": user_request, "type": "clarify",
-                "question": question, "options": options, "answered": False,
-            })
-            sys.exit(0)
+            question = response.get("question", "")
+            options = response.get("options", []) or []
+            print(question)
+            for i, opt in enumerate(options, 1):
+                print(f"{i}. {opt}")
 
-        # Let the user reply with an option number or free text.
-        choice = answer.strip()
-        if choice.isdigit() and 1 <= int(choice) <= len(options):
-            choice = options[int(choice) - 1]
+            answer = read_with_timeout("Your answer: ", CLARIFY_TIMEOUT)
+            if answer is None or not answer.strip():
+                minutes = CLARIFY_TIMEOUT // 60
+                print(f"\nNo answer within {minutes} minute(s) — exiting. "
+                      f"Re-run doit when you're ready.")
+                append_turn({
+                    "model": model, "request": user_request, "type": "clarify",
+                    "question": question, "options": options, "answered": False,
+                })
+                sys.exit(0)
 
-        messages.append({"role": "assistant", "content": json.dumps(response)})
-        messages.append({"role": "user", "content": choice})
+            # Let the user reply with an option number or free text.
+            choice = answer.strip()
+            if choice.isdigit() and 1 <= int(choice) <= len(options):
+                choice = options[int(choice) - 1]
+
+            messages.append({"role": "assistant", "content": json.dumps(response)})
+            messages.append({"role": "user", "content": choice})
+            continue
+
+        break
 
     # Memory: a dedicated call runs every turn and decides whether this turn holds
     # a durable fact/preference worth saving (and condenses it). Kept separate so

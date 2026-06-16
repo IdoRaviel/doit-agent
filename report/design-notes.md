@@ -237,7 +237,41 @@
 
 ---
 
+## Stage 7 — User awareness
+
+- Two mechanisms: (a) CWD injected into the system prompt every turn (FREE — doit
+  inherits the shell's cwd via os.getcwd()); (b) a `shell_history` TOOL the model
+  calls (roll-your-own tool-use: new `tool` response type → doit runs the tool →
+  result fed back → model continues; bounded by MAX_TOOLS).
+- **Tool mechanism is generic + advertised.** A registry (`src/tools.py`) holds
+  tools; `format_tools()` lists them in the system prompt so the model knows what
+  it can call. Adding tools later (output-awareness, multi-step extension) is just
+  a registry entry. Roll-your-own (not native tool-calling) keeps portability.
+- **User vs. doit actions separate naturally:** doit runs commands via subprocess,
+  which never enter interactive bash history → `shell_history` = user's manual
+  commands only (and `doit ...` lines are filtered out). doit's own actions stay
+  in `~/.doit/history.jsonl`.
+- **Model comparison (tool-use):** mistral correctly DECIDES to call
+  `shell_history` and uses the result (recited unguessable seeded commands);
+  llama3 never emits a tool request and hallucinates ("You ran `Ran: ls -l`"),
+  even echoing the internal replay format. Clearest tool-use divergence so far —
+  the non-tool model handles structure but misses the agentic decision.
+- Why this stage demonstrates "tools/agents": the course unit is Tool Use and
+  Agents; this is the explicit tool-call loop (request → execute → feed back →
+  continue), reusing the same intra-turn loop shape as clarify.
+- Bugs fixed here: the memory extractor over-saved (1) a "what I just did" summary
+  and (2) a one-off "delete the .log files" as "the user prefers deleting .log
+  files". Extractor prompt now excludes activity summaries AND one-off actions (a
+  preference needs lasting language or explicit "remember"). Re-tested: one-off rm
+  saves nothing, "from now on always ask" saves. Shows memory + user-awareness can
+  interfere.
+- Needs a documented `PROMPT_COMMAND='history -a'` bashrc hook for fresh in-session
+  history (allowed by the assignment; documented in README).
+- DONE on local models. ACDL: acdl/stage7_user_awareness.md. Runs:
+  report/stage7_user_awareness_runs.md.
+
+---
+
 ## Parking lot / TODO for later stages
 
-- User-awareness, output-awareness, multi-tasking, +1 extension — add a section
-  each as built.
+- Output-awareness, multi-tasking, +1 extension — add a section each as built.
