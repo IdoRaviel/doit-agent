@@ -17,6 +17,7 @@ from src.safety import local_danger_check
 from src.history import load_recent, build_messages, append_turn, prune_stale
 from src.memory import load_memories, format_memories, add_memory
 from src.tools import format_tools, run_tool
+from src.project import find_project_profile, format_profile
 
 # Seconds to wait for an answer to a clarification, and how many clarification
 # rounds / tool calls to allow before giving up (guards against a looping model).
@@ -60,6 +61,9 @@ def main():
     # + durable memories.
     system_prompt = SYSTEM_PROMPT + "\n\n" + format_tools()
     system_prompt += f"\n\nCurrent working directory: {os.getcwd()}"
+    profile_block = format_profile(find_project_profile())
+    if profile_block:
+        system_prompt += "\n\n" + profile_block
     if mem_block:
         system_prompt += "\n\n" + mem_block
     messages = build_messages(system_prompt, history, user_request)

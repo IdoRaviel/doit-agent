@@ -41,6 +41,13 @@ and works across a hosted API model and local models alike.
   survive new terminals and sessions.
 - **Model flexibility** — switch between a hosted API model and local models with a
   one-line config change; no code change.
+- **Project profiles** — drop a `.doit.md` in a folder with project-specific
+  instructions and `doit` follows it within that tree. It uses the **nearest**
+  one: starting from your current directory it walks *up* through parent
+  directories and uses the first `.doit.md` it finds (like how `git` locates
+  `.git`). So a profile in `~/code/myapp/` applies anywhere under `myapp/`, and a
+  closer `.doit.md` in a subfolder overrides a more general one higher up. If none
+  exists up to `/`, nothing is injected.
 
 ## How it works (in one paragraph)
 

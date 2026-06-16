@@ -21,15 +21,21 @@ folders. Recorded sessions: `win1 | list...`, `win2 | create folders...`,
 W1  $ doit "now do the same folder task we did in the other window, here"
     for i in {2020..2026}; do mkdir -p ./years/$i; done
 ```
-W1 reproduced W2's EXACT command (note the distinctive `./years/` nesting). Since
-W1's own history has no folder task and memory was cleared, the model could only
-get this by calling `list_sessions` (to find W2 by its summary) then
-`session_history(win2)`. Both models reproduced it:
-- mistral:7b — correct.
-- llama3:8b — also correct here (reproduced the exact `./years/` command, implying
-  it used the tools). BUT llama3's tool-use is INCONSISTENT — in Stage 7 it failed
-  to call `shell_history` at all. So weak-model cross-window behaviour is not
-  reliable; the strong path is the tool-trained model.
+Reproducing W2's EXACT command (note the distinctive `./years/` nesting) is only
+possible by calling `list_sessions` (to find W2 by its summary) then
+`session_history(win2)`, since W1's own history has no folder task and memory was
+cleared.
+
+- **mistral:7b** — reliable: reproduced `for i in {2020..2026}; do mkdir -p
+  ./years/$i; done` both on first run and on re-test.
+- **llama3:8b — INCONSISTENT**: on one run it reproduced the exact `./years/`
+  command (used the tools); on a re-run it ignored the cross-window reference
+  entirely and just did `ls` (current dir). So it does not reliably decide to call
+  the session tools.
+
+So cross-window is reliable on the tool-trained model (mistral) and unreliable on
+the non-tool model (llama3) — consistent with Stage 7, where llama3 failed to call
+`shell_history`. The strong path is the tool-trained model.
 
 ## Notes / limitations
 - Session id defaults to the launching shell's pid (os.getppid()), so isolation

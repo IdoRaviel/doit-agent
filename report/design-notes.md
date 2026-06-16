@@ -305,9 +305,9 @@
   startup), NOT a close hook — close events are unreliable (kill/crash/SSH-drop).
 - Verified: isolation (W1 "sort them" sorts W1's listing, ignores W2's folders);
   cross-window (W1 reproduces W2's exact `./years/` command via the tools, memory
-  cleared so tools are the only path). Both models reproduced it, but llama3's
-  tool-use is inconsistent (it failed shell_history in Stage 7) — strong path is
-  the tool-trained model.
+  cleared so tools are the only path). mistral reliable (first run + re-test);
+  llama3 INCONSISTENT — reproduced it once, but on re-test ignored the cross-window
+  reference and just did `ls`. Strong path is the tool-trained model.
 - Limitation: memory extractor still occasionally over-saves a one-off action on
   mistral (W2's "create folders" saved as a memory) despite the one-off filter.
 - ACDL: acdl/stage9_multitasking.md (session-scoped History + 2 tools; same shape
@@ -315,6 +315,29 @@
 
 ---
 
-## Parking lot / TODO for later stages
+## Stage 10 — Extension: Project profiles
 
-- +1 extension (describe 3, implement 1) — add a section when built.
+- Three candidates described (report/stage10): context compaction, project
+  profiles, command plans. IMPLEMENTED project profiles (easiest + clearly
+  additional; the multi-step tool loop already exists in core so it's not "the
+  extension").
+- `src/project.py`: nearest `.doit.md` from cwd up the tree (like git/.git),
+  capped, injected into the system prompt as a "Project profile" block — pure
+  context injection, NO new model call / response type / loop. Reuses the
+  cwd/memory pattern.
+- Effect: per-folder behaviour (e.g. profile "always list with ls -lh; never touch
+  ./sacred"). Verified on BOTH local models (mistral + llama3 → ls -lh), incl.
+  walk-up from a subdir. Works on the weak model because it's PUSH (in context),
+  not a tool to decide to call — same as output-awareness.
+- ACDL: acdl/stage10 (adds sys.project[@T] to the system block; same loop as
+  stage9). Runs: report/stage10_project_profiles_runs.md.
+
+---
+
+## All assignment sections complete
+
+Single → dangerous → model flexibility → multi-turn → clarifications → richer
+interactions → memory → user-awareness → output-awareness → multi-tasking →
+extension. Outstanding: gemini memory RECALL retest (store verified; recall
+blocked by free-tier 503/429); assemble the final polished report from these
+notes + run logs.
