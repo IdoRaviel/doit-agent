@@ -229,7 +229,9 @@
   (2) memory list injected into BOTH main + extractor
   prompts grows with count — retrieval/summarization is a candidate extension.
   (3) `cd` in a subprocess doesn't change the user's shell dir (user-awareness/
-  multi-tasking stages). (4) gemini memory run blocked by daily free-tier quota.
+  multi-tasking stages). (4) gemini: STORE verified, but RECALL turn blocked by
+  free-tier 503/429 (the 2-call design doubles requests; hosted rate limits bite
+  faster — local models unaffected).
 - DONE on local models. ACDL: acdl/stage6_memory.md. Runs:
   report/stage6_memory_runs.md.
 

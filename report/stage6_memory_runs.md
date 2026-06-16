@@ -28,14 +28,23 @@ T2  Your LLM class project folder is located at `~/school/llms/ass3`. ...
     >>> memory count: 1
 ```
 
-### gemini/gemini-2.5-flash
-Could not capture: the hosted free-tier DAILY quota was exhausted by the day's
-testing (HTTP 429 RESOURCE_EXHAUSTED). The memory mechanism is model-agnostic and
-verified on both local models; gemini followed prompt rules at least as well in
-earlier stages, so equal-or-better behaviour is expected. To retest, wait for the
-quota window and rerun the sequence. (This itself is a finding: hosted models have
-quotas/rate limits; local models do not — relevant to the two-call memory design,
-which doubles requests per turn.)
+### gemini/gemini-2.5-flash (partial — limited by free-tier quota)
+STORE verified:
+```
+T1  $ doit "the folder ~/school/llms/ass3 is my LLM class project folder"
+    🧠 Remembered: The user's LLM class project folder is ~/school/llms/ass3.
+    Okay, I'll remember that `~/school/llms/ass3` is your LLM class project folder.
+    >>> memory count: 1
+```
+The RECALL turn (T2) could not be captured: gemini's free tier repeatedly returned
+HTTP 503 ("high demand") and 429 (rate limit) — even after a 70s wait — so the
+second turn's calls were refused. This is an infrastructure limit, not a logic
+issue: recall is model-agnostic and verified on both local models above.
+
+Finding worth noting: the two-call memory design (main + extractor) makes EVERY
+turn cost two requests, so hosted free-tier rate limits bite roughly twice as
+fast. Local models have no such limit — a real trade-off of the always-run
+extractor on metered hosted models.
 
 ---
 
