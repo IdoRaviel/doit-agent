@@ -143,6 +143,14 @@ Without this, bash only writes `~/.bash_history` on shell exit, so the most rece
 in-session commands may be missing. (`doit`'s own commands run via subprocess and
 never enter your shell history, so they stay separate from your manual commands.)
 
+**Multi-terminal sessions** work out of the box — `doit` derives a per-terminal
+session id from the launching shell, so each window keeps its own history stream.
+If you want a stable, explicit id (e.g. it survives a shell restart), add:
+
+```bash
+export DOIT_SESSION="$$"   # or any per-terminal value
+```
+
 ### 7. Verify
 
 ```bash

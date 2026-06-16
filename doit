@@ -14,7 +14,7 @@ from src.config import load_config
 from src.llm import ask, extract_memory, SYSTEM_PROMPT
 from src.shell import run_shell
 from src.safety import local_danger_check
-from src.history import load_recent, build_messages, append_turn
+from src.history import load_recent, build_messages, append_turn, prune_stale
 from src.memory import load_memories, format_memories, add_memory
 from src.tools import format_tools, run_tool
 
@@ -50,7 +50,8 @@ def main():
 
     model = config["model"]
 
-    history = load_recent()
+    prune_stale()  # lazily drop history of long-idle (closed) terminals
+    history = load_recent()  # current session only
     memories = load_memories()
     mem_block = format_memories(memories)
 

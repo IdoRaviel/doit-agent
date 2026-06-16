@@ -14,6 +14,8 @@ history, so the two streams separate naturally).
 
 from pathlib import Path
 
+from src.history import list_other_sessions, session_recent
+
 BASH_HISTORY = Path.home() / ".bash_history"
 
 
@@ -36,6 +38,18 @@ def _shell_history(n: int = 20) -> str:
     return "\n".join(recent) if recent else "(no recent user commands)"
 
 
+def _list_sessions() -> str:
+    """List other terminal sessions with a short summary of each (no args)."""
+    return list_other_sessions()
+
+
+def _session_history(session: str = "") -> str:
+    """Return another session's recent turns. args: {"session": "<id>"}."""
+    if not session:
+        return "(provide a session id from list_sessions)"
+    return session_recent(session)
+
+
 # Registry: tool name -> {description (shown to the model), func}
 TOOLS = {
     "shell_history": {
@@ -46,6 +60,22 @@ TOOLS = {
             "default 20>}"
         ),
         "func": _shell_history,
+    },
+    "list_sessions": {
+        "description": (
+            "Lists OTHER terminal sessions (windows), each with a summary of what "
+            "was done there. Use it when the user refers to another window/session "
+            "(e.g. 'the other window', 'window 2'); match their description to a "
+            "session, then call session_history with its id. No args."
+        ),
+        "func": _list_sessions,
+    },
+    "session_history": {
+        "description": (
+            "Returns the recent turns of another session so you can reuse what was "
+            "done there. args: {\"session\": \"<id from list_sessions>\"}"
+        ),
+        "func": _session_history,
     },
 }
 

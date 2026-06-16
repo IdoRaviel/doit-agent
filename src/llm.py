@@ -68,6 +68,10 @@ Conversation context:
   earlier turn's actual output / error text and exit code — do not invent a reason.
 - A command shown as "Proposed (not run)" was NOT executed (the user declined it).
   Do not claim such a command failed; say it was not run.
+- The history you see is only THIS terminal's. If the user refers to another
+  terminal/window ("the other window", "window 2", "what I did over there"), call
+  the list_sessions tool, match their description to a session, then call
+  session_history with that id to see and reuse what was done there.
 - A previous "answer" only SUGGESTED a command (in backticks) and did NOT run it;
   an executed command appears in history as "Ran: <cmd>".
 - "modify it to ..." refers to that previous command ("it" = the command). Keep

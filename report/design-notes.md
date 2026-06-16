@@ -290,6 +290,31 @@
 
 ---
 
+## Stage 9 — Multi-tasking
+
+- Each turn tagged with a `session` id; `load_recent()` filters to the current
+  session so each terminal sees only its own stream. Session id = `$DOIT_SESSION`
+  or `os.getppid()` (the launching shell — stable per terminal, differs between
+  terminals) → works with NO setup; env var is an optional override.
+- Cross-window references reuse the Stage-7 TOOL mechanism (no new structure):
+  `list_sessions` returns a catalog of other sessions with summaries; the model
+  matches the user's phrase ("the other window") to a session id, then
+  `session_history(id)` returns its turns to reuse. The user never types an id —
+  the model bridges phrase→id via the catalog (2-step tool use); ambiguity → clarify.
+- Closed-terminal cleanup is LAZY/staleness-based (prune sessions idle > 7 days on
+  startup), NOT a close hook — close events are unreliable (kill/crash/SSH-drop).
+- Verified: isolation (W1 "sort them" sorts W1's listing, ignores W2's folders);
+  cross-window (W1 reproduces W2's exact `./years/` command via the tools, memory
+  cleared so tools are the only path). Both models reproduced it, but llama3's
+  tool-use is inconsistent (it failed shell_history in Stage 7) — strong path is
+  the tool-trained model.
+- Limitation: memory extractor still occasionally over-saves a one-off action on
+  mistral (W2's "create folders" saved as a memory) despite the one-off filter.
+- ACDL: acdl/stage9_multitasking.md (session-scoped History + 2 tools; same shape
+  as stage7). Runs: report/stage9_multitasking_runs.md.
+
+---
+
 ## Parking lot / TODO for later stages
 
-- Multi-tasking, +1 extension — add a section each as built.
+- +1 extension (describe 3, implement 1) — add a section when built.
