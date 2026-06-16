@@ -272,6 +272,24 @@
 
 ---
 
+## Stage 8 — Output awareness
+
+- Works with NO new code: prior command stdout/stderr/exit-code are already stored
+  and replayed via `resp.replay[@t]`, so the model reasons over them directly.
+  Verified: "why did that fail?" (uses real stderr + suggests sudo) and "which is
+  safe to delete?" (reasons over the listing) on BOTH local models.
+- Push vs pull insight: output-awareness is PUSH (output already in context) so
+  even llama3 does it; contrast Stage 7's shell-history TOOL (pull) which llama3
+  failed because it had to DECIDE to call it.
+- Limitation found + fixed: after an ABORTED dangerous command, "why did that
+  fail?" hallucinated a reason. Prompt now: ground failures in real output, and a
+  "Proposed (not run)" command was not executed (don't claim it failed). Re-tested:
+  correctly says it was not run.
+- ACDL: no scheme change (acdl/stage8_output_awareness.md notes the prompt delta).
+  Runs: report/stage8_output_awareness_runs.md.
+
+---
+
 ## Parking lot / TODO for later stages
 
-- Output-awareness, multi-tasking, +1 extension — add a section each as built.
+- Multi-tasking, +1 extension — add a section each as built.
