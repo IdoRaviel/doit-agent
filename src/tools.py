@@ -16,23 +16,40 @@ from pathlib import Path
 
 from src.history import list_other_sessions, session_recent
 
-BASH_HISTORY = Path.home() / ".bash_history"
+def _find_history_file() -> Path | None:
+    """Return the shell history file path, checking HISTFILE then common locations."""
+    import os
+    histfile = os.environ.get("HISTFILE")
+    if histfile:
+        p = Path(histfile)
+        if p.exists():
+            return p
+    for candidate in [Path.home() / ".zsh_history", Path.home() / ".bash_history"]:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _shell_history(n: int = 20) -> str:
     """Return up to `n` of the user's recent shell commands (most recent last).
 
     Filters out `doit ...` invocations so the result is the user's *manual* shell
-    activity. Requires bash to flush history (see the PROMPT_COMMAND hook in the
-    README) for in-session freshness.
+    activity. Supports both zsh and bash history files.
     """
     try:
         n = int(n)
     except (TypeError, ValueError):
         n = 20
-    if not BASH_HISTORY.exists():
+    hist = _find_history_file()
+    if hist is None:
         return "(no shell history file found)"
-    lines = BASH_HISTORY.read_text(encoding="utf-8", errors="replace").splitlines()
+    raw = hist.read_text(encoding="utf-8", errors="replace")
+    # zsh extended history format: ": <timestamp>:<elapsed>;<command>"
+    lines = []
+    for ln in raw.splitlines():
+        if ln.startswith(": ") and ";" in ln:
+            ln = ln.split(";", 1)[1]
+        lines.append(ln)
     cmds = [ln for ln in lines if ln.strip() and not ln.strip().startswith("doit ")]
     recent = cmds[-n:]
     return "\n".join(recent) if recent else "(no recent user commands)"

@@ -1,4 +1,4 @@
-#!/home/ido-raviel/University/LLM/doit-agent/.venv/bin/python3
+#!/Users/ofekchincholiker/Deep-Learning/doit-agent/.venv/bin/python3
 """doit — natural-language shell agent."""
 
 import json
