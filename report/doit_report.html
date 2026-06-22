@@ -28,6 +28,10 @@
         border-left: 3px solid #1f4e79; border-radius: 4px; padding: 8px 10px; white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid; }
   pre.transcript { border-left-color: #2e7d32; background: #f5faf6; }
   pre.acdl { border-left-color: #6a1b9a; background: #faf6fc; }
+  .runtag { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.8pt; color: #2e7d32;
+            background: #eaf5ec; border: 1px solid #cfe6d3; border-radius: 3px;
+            padding: 1px 6px; display: inline-block; margin: 8px 0 0; }
+  .runtag::before { content: "▶ model: "; color: #5a7d5f; }
 
   table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
   th, td { border: 1px solid #cdd6e0; padding: 5px 7px; text-align: left; vertical-align: top; }
@@ -101,9 +105,11 @@ capability delivered, and the code that implements it. The agent is a single Pyt
 <b>Local, tool-calling:</b> <code>ollama/mistral:7b</code>.
 <b>Local, no tool-calling:</b> <code>ollama/llama3:8b</code> (run with Ollama on an RTX 4070).</div>
 
-<div class="note">Sections 2–11 include gemini output. Sections 9, 10, 12, and 13 were re-run on gemini after initial
-rate-limit blocks; transcripts are now included. The free-tier limit (10 RPM; 2 calls per turn) caused
-intermittent 503/429 errors throughout testing — this itself is a finding documented in §14.</div>
+<div class="note">Every interaction transcript in this report is tagged with the model that produced it
+(<span class="runtag">gemini/gemini-2.5-flash</span> unless noted). The in-section examples below are
+hosted-model (gemini) runs; the side-by-side comparison of all three models is collected in §14 and
+Appendix&nbsp;B. The free-tier limit (10 RPM; 2 calls per turn) caused intermittent 503/429 errors on
+the heaviest multi-call turns (e.g. cross-window tool use) — this itself is a finding documented in §14.</div>
 
 <!-- ===================== 1. OVERVIEW ===================== -->
 <h2 id="overview" class="section-break">1. Overview &amp; Architecture</h2>
@@ -159,6 +165,7 @@ one of three values, so the program can recognise which case it received:</p>
   <li><code>impossible</code> — not achievable in the shell → explain why.</li>
 </ul>
 
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "list the files in my Documents folder"
 # Lists files in ~/Documents
 ls ~/Documents
@@ -183,7 +190,7 @@ user always gets feedback.</p>
 <p>These map to <code>type: "answer"</code> and get a friendly text reply rather than a command.</p>
 
 <div class="note"><b>How the type is decided.</b> There is no separate classifier call — the single
-LPU response carries the <code>type</code>, and a bad/!JSON reply falls back to a plain answer. One
+LPU response carries the <code>type</code>, and a malformed or non-JSON reply falls back to a plain answer. One
 call, one decision, easy to document.</div>
 
 <h3>2.3 ACDL context &amp; prompt</h3>
@@ -206,6 +213,7 @@ the filesystem, or the user — all added in later sections.</div>
 the system (create, move, delete, overwrite, change permissions, rewrite git state) are shown with
 an explanation and require the user to type <code>y</code> before they run.</p>
 
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "create a file named bla.txt"
 # Creates an empty file named 'bla.txt'
 touch bla.txt
@@ -296,12 +304,13 @@ schemes.</p>
 <p>Because each <code>doit</code> run is a separate process, history is persisted so follow-ups can
 refer to earlier turns. After acting, the program appends one record to
 <code>~/.doit/history.jsonl</code>; on the next run it replays the recent turns into the context.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "list the files in this directory"
 ls                       → acdl  doit  report  src  …
 $ doit "now sort them by size, largest first"
-ls -lS                   → (sorted listing)
+ls -S                    → (sorted listing)
 $ doit "no, smallest first"
-ls -lS | tail -n +2 | sort -h</pre>
+ls -Sr</pre>
 <p>Turns 2 and 3 resolve "them" and the correction against the earlier turns — across three
 separate processes.</p>
 
@@ -342,6 +351,7 @@ with the producing <code>model</code> for traceability only — it is not fed ba
 <p>A fourth response type, <code>clarify</code>, lets the model ask a question with options instead
 of guessing. <code>doit</code> prints them, waits for an answer, then re-asks the model with the
 answer appended.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "sort the files here by date"
 Which date do you want to sort by?
 1. modification date
@@ -385,6 +395,7 @@ four tools. ACDL has no <code>While</code>, so the round-trip is modelled with a
 <p>The agent answers non-command questions ("how do I…") with an explanation and a <i>suggested</i>
 command (not executed), and supports follow-ups: "execute it" runs the suggestion, "modify it to…"
 updates it.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "how do I list the 3 largest files here?"
 You can list them with `ls -lS | head -n 3`. ...        (answer — nothing run)
 $ doit "modify it to show the 5 largest"
@@ -411,6 +422,7 @@ right.</div>
 <p>Durable facts/preferences about the user persist across terminals, directories, and sessions in
 <code>~/.doit/memory.jsonl</code>, and are injected into every prompt so the agent can act on them
 later. The same request can both act and store a memory.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "the folder ~/school/llms/ass3 is my LLM class project folder"
 🧠 Remembered: The user's LLM class project folder is ~/school/llms/ass3.
 ... (acknowledgement)
@@ -445,12 +457,14 @@ the extractor is shown the already-known memories ("Already known: …") and ret
 ExtractMemory[@T]: { S: MEMORY_INSTRUCTIONS  U: { env.user_request[@T]  resp.action[@T]  sys.memories } }</pre>
 <figure><img src="report/assets/stage6-Memory.png" alt="memory ACDL"><figcaption>Figure 9.1 — Two contexts per turn: the main context (with memories injected) and the dedicated extraction call.</figcaption></figure>
 
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "remember that ~/school/llms/ass3 is my LLM class project folder"
 🧠 Remembered: The user's LLM class project folder is ~/school/llms/ass3.
-Okay, I'll remember that ~/school/llms/ass3 is your LLM class project folder.
+Okay, I'll remember that `~/school/llms/ass3` is your LLM class project folder.
 
+# later turn — fact recalled from ~/.doit/memory.jsonl:
 $ doit "what is the path to my llm class project?"
-Your LLM class project folder is ~/school/llms/ass3.</pre>
+Your LLM class project folder is `~/school/llms/ass3`.</pre>
 
 <div class="limit"><b>Limitations.</b> Factual recall works well; <i>behavioural</i> preferences
 ("ask me each time") are shaky on <code>mistral</code> (it read the preference as an action and did
@@ -468,6 +482,7 @@ shell's directory), and a <code>shell_history</code> <b>tool</b> returns the use
 interactive commands on demand. This is the explicit tool-call loop the course unit is about —
 implemented as roll-your-own tool use (a <code>tool</code> response type), so it works on all three
 models.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript"># user has run, in their shell:  cd ~/school/llms/ass3 ; mkdir data ; python train.py ; ls -la
 $ doit "summarize what I just did in the shell"
 You navigated to your school project directory, created a 'data' folder, ran the
@@ -498,16 +513,24 @@ course example that lists <code>use_google(...) / use_healthline(...)</code>.</p
 }</pre>
 <figure><img src="report/assets/stage7-user_awareness.png" alt="user awareness ACDL"><figcaption>Figure 10.1 — Tools + CWD in the system block; a tool call feeds its result back.</figcaption></figure>
 
-<pre class="transcript"># user ran manually: cd ~/Documents  →  ls  →  mkdir test_folder3
-$ doit "summarize what I just did"
-You activated a Python virtual environment, changed your directory to ~/Documents,
-listed its contents, and created a folder named test_folder3.</pre>
+<p>A real captured run — the tool reads the actual <code>~/.bash_history</code>, so the summary can only
+come from genuinely calling it (the seeded commands here are real prior shell activity):</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
+<pre class="transcript"># user's real recent shell history: cd RL_spot/ ; cd kinova_arm/ ;
+#   python scripts/rsl_rl/play.py --task Gen3-Reach-v0 --num_envs 1 --real-time ;
+#   python scripts/rsl_rl/play_lift_and_place.py ; claude
+$ doit "summarize what I just did in the shell"
+You recently navigated into the `RL_spot/kinova_arm/` directory and then ran several Python
+scripts. These scripts appear to be related to testing or playing robotic arm tasks (like Reach,
+Grasp, and Lift and Place) using `rsl_rl` frameworks, often specifying tasks, real-time mode, and
+sometimes pre-trained model checkpoints. You also attempted to run a command named `claude`.</pre>
 
 <!-- ===================== 11. OUTPUT AWARENESS ===================== -->
 <h2 id="outaware" class="section-break">11. Output Awareness</h2>
 <h3>11.1 What was implemented</h3>
 <p>Questions about a previous command's output or errors are answered directly, because the prior
 command's stdout/stderr/exit-code are already stored and replayed. No new code was needed.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">$ doit "show the contents of /etc/sudoers"
 cat /etc/sudoers                 → cat: /etc/sudoers: Permission denied   (exit 1)
 $ doit "why did that fail?"
@@ -537,12 +560,17 @@ explicit cross-window references are still possible. The session id is <code>$DO
 stable across invocations in one terminal and different between terminals, so it works with no
 setup.</p>
 <h4>Session isolation</h4>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript">Window 1:  doit "list the files in this directory"        → ls (+ listing)
 Window 2:  doit "create a folder for each year 2020..2026" → for i in {2020..2026}; do mkdir -p ./years/$i; done
 Window 1:  doit "sort them by size"                        → ls -lS   (sorts W1's listing, NOT W2's folders)</pre>
 <h4>Cross-window reference</h4>
+<div class="runtag">ollama/mistral:7b</div>
 <pre class="transcript">Window 1:  doit "now do the same folder task we did in the other window, here"
            for i in {2020..2026}; do mkdir -p ./years/$i; done   (reproduced W2's exact command)</pre>
+<p>(The cross-window reference is shown on <code>mistral:7b</code>: this turn fans out into several
+tool round-trips — <code>list_sessions</code> → <code>session_history</code> → the command — and on
+the gemini free tier those extra calls reliably tripped the 10-RPM limit, see the note below.)</p>
 <p>With memory cleared and Window 1's own history holding no folder task, the only way to obtain
 that command is via the tools: the model calls <code>list_sessions</code> (a catalogue of the other
 windows with a short summary of each) to find Window 2 by its description, then
@@ -576,20 +604,32 @@ next run — rather than tied to a terminal-close hook, because close events are
 environment executes it and feeds the result back, and the loop continues until the model produces
 a final command or answer.</p>
 
-<pre class="transcript">Window 1:
+<div class="runtag">gemini/gemini-2.5-flash</div>
+<pre class="transcript"># two terminals distinguished by $DOIT_SESSION (win1 / win2)
+Window 1:
 $ doit "list the files in my Documents folder"
 ls ~/Documents
-Automated Reasoning   Data Bases   Gender Shades — Seminar.pdf   ML   ...
+BIU   Kit   ...
 
 Window 2:
 $ doit "create a folder called year2025 in my Documents folder"
 mkdir ~/Documents/year2025
-⚠️  This may be dangerous: creates directories.  Proceed? [y/N] y
-✓ done</pre>
-<div class="limit"><b>Note:</b> The follow-up "sort them by date" in Window 1 was blocked by the
-Gemini free-tier rate limit (10 RPM; each doit turn consumes 2 API calls). Session isolation was
-confirmed — Window 2's action did not bleed into Window 1's context. Full cross-window tool use
-was verified on <code>mistral:7b</code> (see §14).</div>
+⚠️  This may be dangerous: creates directories.  Proceed? [y/N]
+
+Window 1:
+$ doit "sort them by date"
+# List files in Documents, sorted by modification date (latest first)
+ls -t ~/Documents
+Kit   BIU   ...</pre>
+<div class="note"><b>Isolation confirmed on gemini.</b> Window 1's "sort them by date" resolved to
+<code>ls -t ~/Documents</code> — it operated on <b>Window 1's own file listing</b>, not on Window 2's
+<code>year2025</code> folder creation, even though Window 2's turn happened in between. The two windows
+keep separate history streams.</div>
+<div class="limit"><b>Where gemini hit a wall.</b> The harder <i>cross-window reference</i> ("now do the
+same folder task we did in the other window") could not be captured on gemini: it requires two extra
+tool round-trips (<code>list_sessions</code> + <code>session_history</code>) in a single turn, which
+repeatedly tripped the free-tier rate limit (10 RPM; 2 calls per normal turn, more here). That exact
+flow was verified on <code>mistral:7b</code> (shown above and in §14).</div>
 
 <!-- ===================== 13. EXTENSIONS ===================== -->
 <h2 id="ext" class="section-break">13. Further Extensions</h2>
@@ -613,6 +653,7 @@ capability (per-project behaviour / context management). <code>doit</code> finds
 using the first one found (like <code>git</code> locating <code>.git</code>) — caps it, and injects
 it as a "Project profile" block. A profile thus applies anywhere below it; a closer profile in a
 subfolder overrides a more general one higher up; if none exists, nothing is injected.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
 <pre class="transcript"># /tmp/projtest/.doit.md :
 #   - When listing files, ALWAYS use long format with human-readable sizes (ls -lh).
 $ cd /tmp/projtest      && doit "list the files here"   → ls -lh
@@ -624,41 +665,46 @@ $ cd /tmp/projtest/sub  && doit "list the files here"   → ls -lh   (walk-up fo
     ForEach(@k: range(1, MAX_STEPS)) { If resp.type[@T,@k] == tool { … } ElseIf … clarify { … } }
 }</pre>
 <figure><img src="report/assets/stage10-project_aware.png" alt="project profiles ACDL"><figcaption>Figure 13.1 — The extension adds one line, <code>sys.project[@T]</code>, to the system block.</figcaption></figure>
-<p>Because the profile is pushed into context (not a tool to decide to call), <b>both</b> local
-models honoured it (each produced <code>ls -lh</code>), including from a nested subdirectory.</p>
-<pre class="transcript"># .doit.md in ~/Documents: "ALWAYS use ls -lh when listing files."
-$ cd ~/Documents
+<p>Because the profile is pushed into context (not a tool to decide to call), <b>all three</b> models
+honoured it — gemini (shown below) and both local models each produced <code>ls -lh</code>, including
+from a nested subdirectory.</p>
+<div class="runtag">gemini/gemini-2.5-flash</div>
+<pre class="transcript"># /tmp/projtest/.doit.md : "When listing files in this project, ALWAYS use `ls -lh`."
+$ cd /tmp/projtest
 $ doit "list the files here"
-# List files in the current directory with human-readable sizes.
+# List files in the current directory with human-readable sizes
 ls -lh
 
-total 82336
-drwxr-xr-x   4 ofekchincholiker  staff   128B  Automated Reasoning
-drwxr-xr-x   7 ofekchincholiker  staff   224B  Data Bases
--rw-r--r--   1 ofekchincholiker  staff   233K  Gender Shades — Seminar.pdf
-drwxr-xr-x  17 ofekchincholiker  staff   544B  ML
--rw-r--r--   1 ofekchincholiker  staff    35M  signup homail.mov
-drwxr-xr-x   2 ofekchincholiker  staff    64B  year2025
-...</pre>
+total 4.0K
+-rw-rw-r-- 1 ido-raviel ido-raviel    0 Jun 22 10:23 alpha.txt
+-rw-rw-r-- 1 ido-raviel ido-raviel    0 Jun 22 10:23 beta.log
+drwxrwxr-x 2 ido-raviel ido-raviel 4.0K Jun 22 10:23 sub
+
+# walk-up: the same profile is honoured from a nested subdirectory with no .doit.md of its own
+$ cd /tmp/projtest/sub
+$ doit "list the files here"          → ls -lh   (profile found by walking up to the parent)</pre>
 
 <!-- ===================== 14. MODEL COMPARISON ===================== -->
 <h2 id="compare" class="section-break">14. Model Comparison</h2>
 <p>The assignment asks for a comparison between two local models — one trained for tool calling
 (<code>mistral:7b</code>) and one not (<code>llama3:8b</code>) — including at least one interaction
 where the weaker model failed or needed different prompting. The hosted model
-(<code>gemini-2.5-flash</code>) is included where output was captured before the free-tier limits.</p>
+(<code>gemini-2.5-flash</code>) is included across all capabilities; the only run it could not complete
+was the heaviest multi-call turn (the cross-window reference), which repeatedly hit the free-tier
+rate limit.</p>
 
 <h3>14.1 Summary across capabilities</h3>
 <table>
   <tr><th>Capability</th><th>gemini (hosted)</th><th>mistral:7b (tool)</th><th>llama3:8b (no-tool)</th></tr>
   <tr><td>Structured JSON contract</td><td>clean</td><td>clean</td><td>clean on easy cases</td></tr>
-  <tr><td>Multi-turn references</td><td>✔ simplest commands</td><td>✔ correct</td><td>✔ resolves, but poor commands</td></tr>
+  <tr><td>Multi-turn references</td><td>✔ resolved; cleanest commands</td><td>✔ correct</td><td>✔ resolves, but poor commands</td></tr>
   <tr><td>Clarify when ambiguous</td><td>✔ asked</td><td>defaulted (didn't ask)</td><td>defaulted + broken command</td></tr>
   <tr><td>"modify it" stays a suggestion</td><td>✔ from rules</td><td>only after an example</td><td>flow ok, command poor</td></tr>
   <tr><td>Memory: combined action+memory</td><td>✔ acknowledged + stored in one turn</td><td>saved memory, did <i>not</i> run</td><td>ran command, did <i>not</i> save</td></tr>
   <tr><td>Shell-history TOOL (pull)</td><td>✔ called tool; summarised real commands correctly</td><td>✔ called it correctly</td><td>✘ never called it; hallucinated</td></tr>
   <tr><td>Output awareness (push)</td><td>✔</td><td>✔</td><td>✔</td></tr>
-  <tr><td>Cross-window TOOL (pull)</td><td>partial — T1 list + T2 create confirmed; follow-up blocked by rate limit</td><td>✔ reliable</td><td>inconsistent (worked once, then failed)</td></tr>
+  <tr><td>Session isolation (per-window history)</td><td>✔ "sort them" used W1's listing, not W2's folder</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Cross-window TOOL (pull)</td><td>✘ not captured — the multi-call turn hit the rate limit</td><td>✔ reliable</td><td>inconsistent (worked once, then failed)</td></tr>
   <tr><td>Project profile (push)</td><td>✔ used <code>ls -lh</code> from .doit.md</td><td>✔</td><td>✔</td></tr>
 </table>
 
@@ -678,7 +724,7 @@ mistral:  ls -lS           then  ls -lS | tail -n +2 | sort -h  (correct)
 llama3 :  ls -lSr | grep ^- | cut -d' ' -f9-                    (WRONG)
           → -r reverses, so "largest first" became smallest first;
           → cut -d' ' splits on a single space but ls -l pads with runs of
-            spaces, so the output was garbled (truncated/!split names).</pre>
+            spaces, so the output was garbled (names truncated and wrongly split).</pre>
 
 <h4>(b) Needed different prompting — "modify it" (mistral)</h4>
 <p>After a "how do I…" answer, "modify it to show 5" should stay a <i>suggestion</i>.
@@ -704,10 +750,13 @@ the other fails — and the two weak models fail on opposite halves. On gemini, 
 the model acknowledged the request verbally (action) and the memory extractor stored the fact in the
 same turn — confirmed in the §9 transcript.</p>
 
-<p>After re-running on gemini: memory store+recall (✔), shell-history tool (✔), and project profiles
-(✔) all worked correctly. Cross-window session isolation was confirmed (T1 list + T2 create); the
-follow-up "sort them by date" was blocked by the free-tier rate limit (10 RPM, 2 calls per turn).
-Full cross-window tool use was verified on <code>mistral:7b</code>.</p>
+<p>On gemini, memory store+recall (✔), the shell-history tool (✔), session isolation (✔), and project
+profiles (✔) all worked correctly — including the in-between follow-up "sort them by date", which
+correctly operated on Window 1's own listing (<code>ls -t</code>) rather than Window 2's folder
+creation. The only behaviour gemini could not complete was the heavier <i>cross-window reference</i>
+turn, which fans out into two extra tool calls (<code>list_sessions</code> + <code>session_history</code>)
+and repeatedly hit the free-tier rate limit (10 RPM, 2 calls per normal turn); that exact flow was
+verified on <code>mistral:7b</code>.</p>
 
 <!-- ===================== APPENDIX A ===================== -->
 <h2 id="appendixA" class="section-break">Appendix A — Prompts, Tools &amp; Schemas</h2>
@@ -821,9 +870,11 @@ Window 1:  doit "now do the same folder task we did in the other window, here"
   mistral:7b → for i in {2020..2026}; do mkdir -p ./years/$i; done   (reliable: used list_sessions + session_history)
   llama3:8b  → reproduced it once, but on a re-run ignored the reference and just did `ls`  (INCONSISTENT)</pre>
 
-<p>Gemini transcripts for memory recall, shell-history tool, and project profiles are included in
-§9, §10, and §13 respectively. Multi-tasking partial transcript (T1 list + T2 create) is in §12;
-the follow-up turn was blocked by free-tier rate limits.</p>
+<p>Gemini transcripts for memory recall, the shell-history tool, session isolation, and project
+profiles are included in §9, §10, §12, and §13 respectively. On gemini the only turn that could not
+be captured was the cross-window <i>reference</i> shown above (the multi-call <code>list_sessions</code>
++ <code>session_history</code> flow), which repeatedly hit the free-tier rate limit; it was verified
+on <code>mistral:7b</code>.</p>
 
 </body>
 </html>
